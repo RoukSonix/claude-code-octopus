@@ -174,6 +174,9 @@ Instructions with dynamic features:
 - **`/create-commit`** - Create git commits with staged changes
 - **`/quality-check-python`** - Python code quality checks
 
+**Skills** (`.claude/skills/`):
+- **`/worktree`** - Create git worktree with automatic gitignored files sync (configs, .env, IDE settings)
+
 ### Key Workflows (Claude Code)
 
 #### Multi-Agent Orchestration Pattern
