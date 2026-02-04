@@ -1,7 +1,7 @@
 ---
 name: worktree
 description: Create git worktree with automatic sync of gitignored files (configs, .env, IDE settings). Use when setting up parallel development environments or working on multiple branches simultaneously.
-argument-hint: "<worktree-path> [branch]"
+argument-hint: "[worktree-path] [branch]"
 allowed-tools: Bash(bash *), Bash(git *), Read, Glob
 disable-model-invocation: true
 ---
@@ -27,10 +27,11 @@ bash .claude/skills/worktree/scripts/worktree.sh $ARGUMENTS
 ## What This Skill Does
 
 1. **Validates** the current directory is a git repository
-2. **Creates** a new git worktree at the specified path
-3. **Parses** .gitignore to find files that should be synced
-4. **Copies** important config files while excluding heavy directories
-5. **Reports** what was copied and provides next steps
+2. **Generates** default path and branch if not specified
+3. **Creates** a new git worktree at the specified path
+4. **Parses** .gitignore to find files that should be synced
+5. **Copies** important config files while excluding heavy directories
+6. **Reports** what was copied and provides next steps
 
 ## Copied Files (from .gitignore)
 
@@ -54,23 +55,30 @@ Heavy directories are always excluded:
 
 ## Arguments
 
-- `worktree-path` (required): Path where the worktree will be created
-- `branch` (optional): Branch name. Defaults to current branch. Creates new branch if doesn't exist.
+- `worktree-path` (optional): Path where the worktree will be created
+  - Default: `../worktrees/<repo-name>-<unix-timestamp>`
+- `branch` (optional): Branch name
+  - Default: `ai-worktree/<random-car-brand>-<unix-timestamp>`
+  - Creates new branch if doesn't exist
 
 ## Examples
 
 ```bash
-# Create worktree for a feature branch
+# Auto-generate both path and branch (simplest usage)
+/worktree
+# Creates: ../worktrees/my-project-1738680000
+# Branch: ai-worktree/ferrari-1738680000
+
+# Specify path only, auto-generate branch
+/worktree ../my-feature
+# Creates: ../my-feature
+# Branch: ai-worktree/toyota-1738680000
+
+# Specify both path and branch
 /worktree ../my-repo-feature feature/new-auth
 
-# Create worktree using current branch
-/worktree ../my-repo-bugfix
-
-# Create worktree with absolute path
+# Absolute path with specific branch
 /worktree /tmp/worktree-test develop
-
-# Create worktree with new branch (auto-created)
-/worktree ../experiment experiment/new-idea
 ```
 
 ## Output Example

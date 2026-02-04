@@ -13,6 +13,22 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
+# Car brands for random branch naming
+CAR_BRANDS=(
+    "toyota" "honda" "ford" "chevrolet" "bmw" "mercedes" "audi" "volkswagen"
+    "porsche" "ferrari" "lamborghini" "maserati" "jaguar" "lexus" "infiniti"
+    "acura" "mazda" "subaru" "nissan" "hyundai" "kia" "volvo" "tesla" "rivian"
+    "bentley" "rollsroyce" "aston" "mclaren" "bugatti" "pagani" "koenigsegg"
+    "alpine" "lotus" "morgan" "mini" "fiat" "alfa" "lancia" "peugeot" "renault"
+    "citroen" "skoda" "seat" "opel" "saab" "lada" "dacia" "suzuki" "mitsubishi"
+)
+
+# Function to get random car brand
+get_random_car() {
+    local index=$((RANDOM % ${#CAR_BRANDS[@]}))
+    echo "${CAR_BRANDS[$index]}"
+}
+
 # Blacklist of heavy directories (never copy these)
 BLACKLIST=(
     "node_modules"
@@ -64,26 +80,30 @@ format_size() {
 
 # Print usage
 usage() {
-    echo "Usage: $0 <worktree-path> [branch]"
+    echo "Usage: $0 [worktree-path] [branch]"
     echo ""
     echo "Arguments:"
     echo "  worktree-path  Path where the worktree will be created"
-    echo "  branch         Branch name (optional, defaults to current branch)"
+    echo "                 Default: ../worktrees/<repo-name>-<timestamp>"
+    echo "  branch         Branch name"
+    echo "                 Default: ai-worktree/<car-brand>-<timestamp>"
     echo ""
     echo "Example:"
-    echo "  $0 ../my-feature feature/auth"
+    echo "  $0                                    # Auto-generate path and branch"
+    echo "  $0 ../my-feature                      # Auto-generate branch only"
+    echo "  $0 ../my-feature feature/auth         # Specify both"
     echo "  $0 /tmp/worktree-test"
-    exit 1
 }
 
 # Main script
 main() {
-    # Check arguments
-    if [[ $# -lt 1 ]]; then
+    # Handle --help flag
+    if [[ "${1:-}" == "--help" ]] || [[ "${1:-}" == "-h" ]]; then
         usage
+        exit 0
     fi
 
-    local worktree_path="$1"
+    local worktree_path="${1:-}"
     local branch="${2:-}"
 
     # Step 1: Validate git repository
@@ -93,19 +113,28 @@ main() {
     fi
 
     local source_dir=$(git rev-parse --show-toplevel)
+    local repo_name=$(basename "$source_dir")
+    local timestamp=$(date +%s)
+
     echo -e "${BLUE}Source repository:${NC} $source_dir"
 
-    # Step 2: Get current branch if not specified
-    if [[ -z "$branch" ]]; then
-        branch=$(git branch --show-current)
-        if [[ -z "$branch" ]]; then
-            echo -e "${RED}Error: Not on any branch (detached HEAD) and no branch specified${NC}"
-            exit 1
-        fi
+    # Step 2: Generate default worktree path if not specified
+    if [[ -z "$worktree_path" ]]; then
+        local worktrees_dir="$source_dir/../worktrees"
+        worktree_path="$worktrees_dir/${repo_name}-${timestamp}"
+        echo -e "${YELLOW}Using default path:${NC} $worktree_path"
     fi
+
+    # Step 3: Generate default branch name if not specified
+    if [[ -z "$branch" ]]; then
+        local car_brand=$(get_random_car)
+        branch="ai-worktree/${car_brand}-${timestamp}"
+        echo -e "${YELLOW}Using generated branch:${NC} $branch"
+    fi
+
     echo -e "${BLUE}Branch:${NC} $branch"
 
-    # Step 3: Resolve worktree path (macOS compatible)
+    # Step 4: Resolve worktree path (macOS compatible)
     if [[ "$worktree_path" != /* ]]; then
         worktree_path="$(pwd)/$worktree_path"
     fi
@@ -113,14 +142,14 @@ main() {
     worktree_path=$(python3 -c "import os; print(os.path.normpath(os.path.abspath('$worktree_path')))")
     echo -e "${BLUE}Worktree path:${NC} $worktree_path"
 
-    # Step 4: Check if path exists
+    # Step 5: Check if path exists
     if [[ -e "$worktree_path" ]]; then
         echo -e "${RED}Error: Path already exists: $worktree_path${NC}"
         echo -e "${YELLOW}Suggestion: Try a different path like ${worktree_path}-2${NC}"
         exit 1
     fi
 
-    # Step 5: Check if branch exists
+    # Step 6: Check if branch exists
     local branch_exists=false
     if git show-ref --verify --quiet "refs/heads/$branch" 2>/dev/null; then
         branch_exists=true
@@ -128,7 +157,7 @@ main() {
         branch_exists=true
     fi
 
-    # Step 6: Create worktree
+    # Step 7: Create worktree
     echo ""
     echo -e "${BLUE}Creating git worktree...${NC}"
 
@@ -147,7 +176,7 @@ main() {
 
     echo -e "${GREEN}Worktree created successfully${NC}"
 
-    # Step 7: Parse .gitignore and find files to copy
+    # Step 8: Parse .gitignore and find files to copy
     local gitignore_file="$source_dir/.gitignore"
     local files_to_copy=()
     local skipped_dirs=()
@@ -247,7 +276,7 @@ main() {
         echo -e "${YELLOW}No .gitignore found, skipping file sync${NC}"
     fi
 
-    # Step 8: Copy files
+    # Step 9: Copy files
     local copied_count=0
     if [[ ${#files_to_copy[@]} -gt 0 ]]; then
         echo ""
@@ -272,7 +301,7 @@ main() {
         done
     fi
 
-    # Step 9: Generate report
+    # Step 10: Generate report
     echo ""
     echo -e "${GREEN}========================================${NC}"
     echo -e "${GREEN}Git Worktree Created Successfully${NC}"
