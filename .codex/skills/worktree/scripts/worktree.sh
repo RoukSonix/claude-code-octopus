@@ -4,7 +4,7 @@
 # Creates a git worktree and copies important gitignored files
 #
 
-set -eo pipefail
+set -euo pipefail
 
 # Colors for output
 RED='\033[0;31m'
@@ -12,6 +12,9 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
+
+# Constants
+readonly MAX_FILE_SIZE_BYTES=10485760  # 10MB
 
 # Car brands for random branch naming
 CAR_BRANDS=(
@@ -22,12 +25,6 @@ CAR_BRANDS=(
     "alpine" "lotus" "morgan" "mini" "fiat" "alfa" "lancia" "peugeot" "renault"
     "citroen" "skoda" "seat" "opel" "saab" "lada" "dacia" "suzuki" "mitsubishi"
 )
-
-# Function to get random car brand
-get_random_car() {
-    local index=$((RANDOM % ${#CAR_BRANDS[@]}))
-    echo "${CAR_BRANDS[$index]}"
-}
 
 # Blacklist of heavy directories (never copy these)
 BLACKLIST=(
@@ -53,10 +50,27 @@ BLACKLIST=(
     "*.egg-info"
 )
 
+# Cleanup function for partial failures
+cleanup_on_failure() {
+    local exit_code=$?
+    if [[ $exit_code -ne 0 && -n "${WORKTREE_PATH_FOR_CLEANUP:-}" && -d "$WORKTREE_PATH_FOR_CLEANUP" ]]; then
+        echo -e "${YELLOW}Cleaning up partial worktree at: $WORKTREE_PATH_FOR_CLEANUP${NC}"
+        git worktree remove --force "$WORKTREE_PATH_FOR_CLEANUP" 2>/dev/null || rm -rf "$WORKTREE_PATH_FOR_CLEANUP"
+    fi
+    exit $exit_code
+}
+
+# Function to get random car brand
+get_random_car() {
+    local index=$((RANDOM % ${#CAR_BRANDS[@]}))
+    echo "${CAR_BRANDS[$index]}"
+}
+
 # Function to check if path matches blacklist
 is_blacklisted() {
     local path="$1"
-    local basename=$(basename "$path")
+    local basename
+    basename=$(basename "$path")
 
     for pattern in "${BLACKLIST[@]}"; do
         if [[ "$basename" == $pattern ]]; then
@@ -64,6 +78,12 @@ is_blacklisted() {
         fi
     done
     return 1
+}
+
+# Function to get file size (cross-platform)
+get_file_size() {
+    local file="$1"
+    stat -f%z "$file" 2>/dev/null || stat -c%s "$file" 2>/dev/null || echo "0"
 }
 
 # Function to format file size
@@ -75,6 +95,60 @@ format_size() {
         echo "$(( size / 1024 )) KB"
     else
         echo "$(( size / 1048576 )) MB"
+    fi
+}
+
+# Function to normalize path (pure bash, no python)
+normalize_path() {
+    local path="$1"
+    local result=""
+    local IFS='/'
+    local -a parts
+    local -a normalized=()
+
+    # Handle absolute vs relative
+    if [[ "$path" == /* ]]; then
+        result="/"
+    fi
+
+    # Split path into parts
+    read -ra parts <<< "$path"
+
+    for part in "${parts[@]}"; do
+        case "$part" in
+            ""|".")
+                # Skip empty and current dir
+                ;;
+            "..")
+                # Go up one level if possible
+                if [[ ${#normalized[@]} -gt 0 ]]; then
+                    unset 'normalized[${#normalized[@]}-1]'
+                fi
+                ;;
+            *)
+                normalized+=("$part")
+                ;;
+        esac
+    done
+
+    # Join parts
+    result="${result}$(IFS='/'; echo "${normalized[*]}")"
+
+    # Handle empty result
+    if [[ -z "$result" ]]; then
+        result="."
+    fi
+
+    echo "$result"
+}
+
+# Function to validate branch name
+validate_branch_name() {
+    local branch="$1"
+    if ! git check-ref-format --branch "$branch" >/dev/null 2>&1; then
+        echo -e "${RED}Error: Invalid branch name: $branch${NC}"
+        echo -e "${YELLOW}Branch names cannot contain spaces, ~, ^, :, ?, *, [, or \\${NC}"
+        exit 1
     fi
 }
 
@@ -112,9 +186,12 @@ main() {
         exit 1
     fi
 
-    local source_dir=$(git rev-parse --show-toplevel)
-    local repo_name=$(basename "$source_dir")
-    local timestamp=$(date +%s)
+    local source_dir
+    source_dir=$(git rev-parse --show-toplevel)
+    local repo_name
+    repo_name=$(basename "$source_dir")
+    local timestamp
+    timestamp=$(date +%s)
 
     echo -e "${BLUE}Source repository:${NC} $source_dir"
 
@@ -127,19 +204,23 @@ main() {
 
     # Step 3: Generate default branch name if not specified
     if [[ -z "$branch" ]]; then
-        local car_brand=$(get_random_car)
+        local car_brand
+        car_brand=$(get_random_car)
         branch="ai-worktree/${car_brand}-${timestamp}"
         echo -e "${YELLOW}Using generated branch:${NC} $branch"
     fi
 
+    # Step 3.1: Validate branch name
+    validate_branch_name "$branch"
+
     echo -e "${BLUE}Branch:${NC} $branch"
 
-    # Step 4: Resolve worktree path (macOS compatible)
+    # Step 4: Resolve worktree path (pure bash, no python injection risk)
     if [[ "$worktree_path" != /* ]]; then
         worktree_path="$(pwd)/$worktree_path"
     fi
-    # Normalize path without requiring it to exist (macOS compatible)
-    worktree_path=$(python3 -c "import os; print(os.path.normpath(os.path.abspath('$worktree_path')))")
+    # Normalize path using pure bash function
+    worktree_path=$(normalize_path "$worktree_path")
     echo -e "${BLUE}Worktree path:${NC} $worktree_path"
 
     # Step 5: Check if path exists
@@ -148,6 +229,10 @@ main() {
         echo -e "${YELLOW}Suggestion: Try a different path like ${worktree_path}-2${NC}"
         exit 1
     fi
+
+    # Set up cleanup trap for partial failures
+    WORKTREE_PATH_FOR_CLEANUP="$worktree_path"
+    trap cleanup_on_failure EXIT
 
     # Step 6: Check if branch exists
     local branch_exists=false
@@ -178,8 +263,9 @@ main() {
 
     # Step 8: Parse .gitignore and find files to copy
     local gitignore_file="$source_dir/.gitignore"
-    local files_to_copy=()
-    local skipped_dirs=()
+    local -a files_to_copy=()
+    local -a skipped_dirs=()
+    local -A seen_files=()  # Associative array for O(1) duplicate detection
     local total_size=0
 
     if [[ -f "$gitignore_file" ]]; then
@@ -194,9 +280,13 @@ main() {
             # Skip negation patterns
             [[ "$pattern" =~ ^!.*$ ]] && continue
 
-            # Remove leading/trailing whitespace
-            pattern=$(echo "$pattern" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+            # Remove leading/trailing whitespace using bash parameter expansion
+            pattern="${pattern#"${pattern%%[![:space:]]*}"}"
+            pattern="${pattern%"${pattern##*[![:space:]]}"}"
             [[ -z "$pattern" ]] && continue
+
+            # Remove trailing slash (gitignore uses it for directories)
+            pattern="${pattern%/}"
 
             # Find matching files
             local found_files
@@ -206,14 +296,20 @@ main() {
                 [[ -z "$file" ]] && continue
 
                 # Check if file is in a blacklisted directory
-                local rel_path="${file#$source_dir/}"
+                local rel_path="${file#"$source_dir"/}"
                 local skip=false
 
-                for part in $(echo "$rel_path" | tr '/' '\n'); do
+                # Use IFS and read -ra to handle paths with spaces safely
+                local IFS='/'
+                local -a path_parts
+                read -ra path_parts <<< "$rel_path"
+
+                for part in "${path_parts[@]}"; do
                     if is_blacklisted "$part"; then
                         skip=true
-                        if [[ ! " ${skipped_dirs[*]} " =~ " $part " ]]; then
+                        if [[ -z "${seen_files[$part]:-}" ]]; then
                             skipped_dirs+=("$part")
+                            seen_files[$part]=1
                         fi
                         break
                     fi
@@ -225,10 +321,17 @@ main() {
 
                 # Check if it's a regular file (not directory)
                 if [[ -f "$file" ]]; then
-                    # Skip files larger than 10MB
-                    local file_size=$(stat -f%z "$file" 2>/dev/null || stat -c%s "$file" 2>/dev/null || echo "0")
-                    if (( file_size > 10485760 )); then
-                        echo -e "${YELLOW}  Skipping large file: $rel_path ($(format_size $file_size))${NC}"
+                    # Skip if already added (O(1) lookup)
+                    if [[ -n "${seen_files[$file]:-}" ]]; then
+                        continue
+                    fi
+                    seen_files[$file]=1
+
+                    # Skip files larger than MAX_FILE_SIZE_BYTES
+                    local file_size
+                    file_size=$(get_file_size "$file")
+                    if (( file_size > MAX_FILE_SIZE_BYTES )); then
+                        echo -e "${YELLOW}  Skipping large file: $rel_path ($(format_size "$file_size"))${NC}"
                         continue
                     fi
 
@@ -239,7 +342,7 @@ main() {
         done < "$gitignore_file"
 
         # Also explicitly look for common config files
-        local common_configs=(
+        local -a common_configs=(
             ".env"
             ".env.local"
             ".env.development"
@@ -256,20 +359,16 @@ main() {
         for config in "${common_configs[@]}"; do
             local config_path="$source_dir/$config"
             if [[ -f "$config_path" ]]; then
-                # Check if already in list
-                local already_added=false
-                for f in "${files_to_copy[@]}"; do
-                    if [[ "$f" == "$config_path" ]]; then
-                        already_added=true
-                        break
-                    fi
-                done
-
-                if ! $already_added; then
-                    local file_size=$(stat -f%z "$config_path" 2>/dev/null || stat -c%s "$config_path" 2>/dev/null || echo "0")
-                    files_to_copy+=("$config_path")
-                    total_size=$((total_size + file_size))
+                # Check if already in list (O(1) lookup)
+                if [[ -n "${seen_files[$config_path]:-}" ]]; then
+                    continue
                 fi
+                seen_files[$config_path]=1
+
+                local file_size
+                file_size=$(get_file_size "$config_path")
+                files_to_copy+=("$config_path")
+                total_size=$((total_size + file_size))
             fi
         done
     else
@@ -283,23 +382,29 @@ main() {
         echo -e "${BLUE}Copying gitignored files...${NC}"
 
         for file in "${files_to_copy[@]}"; do
-            local rel_path="${file#$source_dir/}"
+            local rel_path="${file#"$source_dir"/}"
             local dest_path="$worktree_path/$rel_path"
-            local dest_dir=$(dirname "$dest_path")
+            local dest_dir
+            dest_dir=$(dirname "$dest_path")
 
             # Create parent directory
             mkdir -p "$dest_dir"
 
             # Copy file preserving permissions
             if cp -p "$file" "$dest_path" 2>/dev/null; then
-                local file_size=$(stat -f%z "$file" 2>/dev/null || stat -c%s "$file" 2>/dev/null || echo "0")
-                echo -e "  ${GREEN}+${NC} $rel_path ($(format_size $file_size))"
+                local file_size
+                file_size=$(get_file_size "$file")
+                echo -e "  ${GREEN}+${NC} $rel_path ($(format_size "$file_size"))"
                 copied_count=$((copied_count + 1))
             else
                 echo -e "  ${RED}x${NC} Failed to copy: $rel_path"
             fi
         done
     fi
+
+    # Clear the cleanup trap on success
+    WORKTREE_PATH_FOR_CLEANUP=""
+    trap - EXIT
 
     # Step 10: Generate report
     echo ""
@@ -315,7 +420,7 @@ main() {
 
     if [[ $copied_count -gt 0 ]]; then
         echo -e "${BLUE}Copied Files:${NC}"
-        echo "  Total: $copied_count files, $(format_size $total_size)"
+        echo "  Total: $copied_count files, $(format_size "$total_size")"
     else
         echo -e "${YELLOW}No gitignored files were copied${NC}"
     fi
