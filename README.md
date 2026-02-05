@@ -13,9 +13,10 @@ A centralized toolkit for AI coding assistants, providing reusable agents, comma
 | CLI | Configuration | Location |
 |-----|--------------|----------|
 | **Claude Code** | Sub-agents + commands + skills | `.claude/` |
-| **Codex CLI** | AGENTS.md + commands | `.codex/` |
-| **Factory CLI** | AGENTS.md + droids | `.factory/` |
-| **Copilot CLI** | AGENTS.md + prompts | `.github/` |
+| **Codex CLI** | AGENTS.md + commands + skills | `.codex/` |
+| **Factory CLI** | AGENTS.md + droids + skills | `.factory/` |
+| **OpenCode CLI** | Agents + commands + skills | `.opencode/` |
+| **Copilot CLI** | AGENTS.md + prompts + skills | `.github/` |
 
 ## Repository Map
 
@@ -28,12 +29,19 @@ code-agent-octopus/
 │   ├── commands/              # Slash commands (Context7-enabled)
 │   └── skills/                # Skills with shell scripts (automation)
 ├── .codex/
-│   └── commands/              # Codex CLI command mirrors
+│   ├── commands/              # Codex CLI command mirrors
+│   └── skills/                # Codex CLI skills (worktree, etc.)
 ├── .factory/
 │   ├── droids/                # Canonical agent templates (source of truth)
-│   └── commands/              # Canonical command templates
+│   ├── commands/              # Canonical command templates
+│   └── skills/                # Factory CLI skills (worktree, etc.)
+├── .opencode/
+│   ├── agent/                 # OpenCode CLI agents (flat structure)
+│   ├── command/               # OpenCode CLI commands (flat structure)
+│   └── skills/                # OpenCode CLI skills (worktree, etc.)
 ├── .github/
-│   └── prompts/               # GitHub Actions/Copilot prompts
+│   ├── prompts/               # GitHub Actions/Copilot prompts
+│   └── skills/                # GitHub Copilot CLI skills (worktree, etc.)
 └── docs/
     └── claude-code/           # Guides for commands, agents, hooks
 ```
@@ -90,15 +98,31 @@ claude
 /worktree                      # Create git worktree with config sync
 ```
 
-### Codex/Factory CLI
+### Codex CLI
 ```bash
-codex        # or: factory droid code
+codex
 # AGENTS.md auto-loads project context
+/worktree                      # Create git worktree with config sync
+```
+
+### Factory CLI
+```bash
+factory droid code
+# AGENTS.md auto-loads, droids available
+/worktree                      # Create git worktree with config sync
+```
+
+### OpenCode CLI
+```bash
+opencode
+@planning-implementation       # Invoke agent with @mention
+/worktree                      # Create git worktree with config sync
 ```
 
 ### Copilot CLI
 ```bash
 gh copilot   # Reads AGENTS.md and .github/copilot-instructions.md
+/worktree                      # Create git worktree with config sync
 ```
 
 ## Documentation
