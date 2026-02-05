@@ -3,6 +3,8 @@
 # Git Worktree with Gitignored Files Sync
 # Creates a git worktree and copies important gitignored files
 #
+# Compatible with bash 3.2+ (macOS default)
+#
 
 set -euo pipefail
 
@@ -50,6 +52,10 @@ BLACKLIST=(
     "*.egg-info"
 )
 
+# Global variables for tracking (bash 3.x compatible - no associative arrays)
+SEEN_FILES=""
+SEEN_DIRS=""
+
 # Cleanup function for partial failures
 cleanup_on_failure() {
     local exit_code=$?
@@ -58,6 +64,24 @@ cleanup_on_failure() {
         git worktree remove --force "$WORKTREE_PATH_FOR_CLEANUP" 2>/dev/null || rm -rf "$WORKTREE_PATH_FOR_CLEANUP"
     fi
     exit $exit_code
+}
+
+# Function to check if item exists in newline-separated list (bash 3.x compatible)
+is_in_list() {
+    local item="$1"
+    local list="$2"
+    echo "$list" | grep -qxF "$item" 2>/dev/null
+}
+
+# Function to add item to newline-separated list
+add_to_list() {
+    local item="$1"
+    local list="$2"
+    if [[ -z "$list" ]]; then
+        echo "$item"
+    else
+        printf '%s\n%s' "$list" "$item"
+    fi
 }
 
 # Function to get random car brand
@@ -69,11 +93,11 @@ get_random_car() {
 # Function to check if path matches blacklist
 is_blacklisted() {
     local path="$1"
-    local basename
-    basename=$(basename "$path")
+    local bname
+    bname=$(basename "$path")
 
     for pattern in "${BLACKLIST[@]}"; do
-        if [[ "$basename" == $pattern ]]; then
+        if [[ "$bname" == $pattern ]]; then
             return 0
         fi
     done
@@ -102,37 +126,44 @@ format_size() {
 normalize_path() {
     local path="$1"
     local result=""
-    local IFS='/'
-    local -a parts
-    local -a normalized=()
+    local parts=""
+    local normalized=""
+    local part=""
 
     # Handle absolute vs relative
     if [[ "$path" == /* ]]; then
         result="/"
     fi
 
-    # Split path into parts
-    read -ra parts <<< "$path"
-
-    for part in "${parts[@]}"; do
+    # Split path into parts and process
+    local old_ifs="$IFS"
+    IFS='/'
+    for part in $path; do
         case "$part" in
             ""|".")
                 # Skip empty and current dir
                 ;;
             "..")
-                # Go up one level if possible
-                if [[ ${#normalized[@]} -gt 0 ]]; then
-                    unset 'normalized[${#normalized[@]}-1]'
-                fi
+                # Go up one level - remove last component
+                normalized="${normalized%/*}"
                 ;;
             *)
-                normalized+=("$part")
+                if [[ -z "$normalized" ]]; then
+                    normalized="$part"
+                else
+                    normalized="$normalized/$part"
+                fi
                 ;;
         esac
     done
+    IFS="$old_ifs"
 
-    # Join parts
-    result="${result}$(IFS='/'; echo "${normalized[*]}")"
+    # Build result
+    if [[ "$result" == "/" ]]; then
+        result="/$normalized"
+    else
+        result="$normalized"
+    fi
 
     # Handle empty result
     if [[ -z "$result" ]]; then
@@ -263,9 +294,8 @@ main() {
 
     # Step 8: Parse .gitignore and find files to copy
     local gitignore_file="$source_dir/.gitignore"
-    local -a files_to_copy=()
-    local -a skipped_dirs=()
-    local -A seen_files=()  # Associative array for O(1) duplicate detection
+    local files_to_copy=()
+    local skipped_dirs=()
     local total_size=0
 
     if [[ -f "$gitignore_file" ]]; then
@@ -299,21 +329,20 @@ main() {
                 local rel_path="${file#"$source_dir"/}"
                 local skip=false
 
-                # Use IFS and read -ra to handle paths with spaces safely
-                local IFS='/'
-                local -a path_parts
-                read -ra path_parts <<< "$rel_path"
-
-                for part in "${path_parts[@]}"; do
+                # Split path by / and check each component
+                local old_ifs="$IFS"
+                IFS='/'
+                for part in $rel_path; do
                     if is_blacklisted "$part"; then
                         skip=true
-                        if [[ -z "${seen_files[$part]:-}" ]]; then
+                        if ! is_in_list "$part" "$SEEN_DIRS"; then
                             skipped_dirs+=("$part")
-                            seen_files[$part]=1
+                            SEEN_DIRS=$(add_to_list "$part" "$SEEN_DIRS")
                         fi
                         break
                     fi
                 done
+                IFS="$old_ifs"
 
                 if $skip; then
                     continue
@@ -321,11 +350,11 @@ main() {
 
                 # Check if it's a regular file (not directory)
                 if [[ -f "$file" ]]; then
-                    # Skip if already added (O(1) lookup)
-                    if [[ -n "${seen_files[$file]:-}" ]]; then
+                    # Skip if already added
+                    if is_in_list "$file" "$SEEN_FILES"; then
                         continue
                     fi
-                    seen_files[$file]=1
+                    SEEN_FILES=$(add_to_list "$file" "$SEEN_FILES")
 
                     # Skip files larger than MAX_FILE_SIZE_BYTES
                     local file_size
@@ -342,7 +371,7 @@ main() {
         done < "$gitignore_file"
 
         # Also explicitly look for common config files
-        local -a common_configs=(
+        local common_configs=(
             ".env"
             ".env.local"
             ".env.development"
@@ -359,11 +388,11 @@ main() {
         for config in "${common_configs[@]}"; do
             local config_path="$source_dir/$config"
             if [[ -f "$config_path" ]]; then
-                # Check if already in list (O(1) lookup)
-                if [[ -n "${seen_files[$config_path]:-}" ]]; then
+                # Check if already in list
+                if is_in_list "$config_path" "$SEEN_FILES"; then
                     continue
                 fi
-                seen_files[$config_path]=1
+                SEEN_FILES=$(add_to_list "$config_path" "$SEEN_FILES")
 
                 local file_size
                 file_size=$(get_file_size "$config_path")
