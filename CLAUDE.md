@@ -174,6 +174,9 @@ Instructions with dynamic features:
 - **`/create-commit`** - Create git commits with staged changes
 - **`/quality-check-python`** - Python code quality checks
 
+**Skills** (`.claude/skills/`):
+- **`/worktree`** - Create git worktree with automatic gitignored files sync (configs, .env, IDE settings)
+
 ### Key Workflows (Claude Code)
 
 #### Multi-Agent Orchestration Pattern
@@ -397,6 +400,54 @@ codex
 - **OpenAI Codex Docs**: https://developers.openai.com/codex/cli
 - **Factory CLI Docs**: https://docs.factory.ai/factory-cli
 - **GitHub Copilot CLI**: https://docs.github.com/en/copilot/concepts/agents/about-copilot-cli
+
+## Multi-Vendor Skills Distribution
+
+Skills are shell script-based automation that execute deterministically without model invocation. The `/worktree` skill is distributed across all supported CLI vendors.
+
+### Skills Locations by Vendor
+
+| Vendor | Location | Auto-Discovery |
+|--------|----------|----------------|
+| **Claude Code** | `.claude/skills/worktree/` | Native |
+| **Codex CLI** | `.codex/skills/worktree/` | Native |
+| **Factory CLI** | `.factory/skills/worktree/` | Native |
+| **OpenCode** | `.opencode/skills/worktree/` | Native + reads `.claude/skills/` |
+| **GitHub Copilot** | `.github/skills/worktree/` | Native + reads `.claude/skills/` |
+
+### Skill Format Compatibility
+
+All vendors use the same `SKILL.md` + `scripts/` structure:
+
+```
+.{vendor}/skills/worktree/
+├── SKILL.md              # YAML frontmatter + documentation
+└── scripts/
+    └── worktree.sh       # Executable shell script
+```
+
+### Key Differences
+
+- **Claude Code**: Uses `allowed-tools` and `disable-model-invocation: true`
+- **Codex CLI**: Uses simplified frontmatter (name, description, argument-hint)
+- **Factory CLI**: Droid auto-matches by description
+- **OpenCode**: Adds `license` and `compatibility` fields
+- **GitHub Copilot**: Same format as OpenCode
+
+### Syncing Skills
+
+When updating the worktree skill:
+
+1. **Edit source**: Modify `.claude/skills/worktree/`
+2. **Copy to vendors**:
+   ```bash
+   cp -r .claude/skills/worktree/scripts/* .codex/skills/worktree/scripts/
+   cp -r .claude/skills/worktree/scripts/* .factory/skills/worktree/scripts/
+   cp -r .claude/skills/worktree/scripts/* .opencode/skills/worktree/scripts/
+   cp -r .claude/skills/worktree/scripts/* .github/skills/worktree/scripts/
+   ```
+3. **Update SKILL.md** for each vendor if frontmatter differs
+4. **Test** skill invocation in each CLI
 
 ## Security Considerations
 

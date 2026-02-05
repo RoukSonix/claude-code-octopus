@@ -14,6 +14,11 @@ This directory contains OpenCode CLI agents and commands, migrated from Claude C
 │   ├── agentic-*.md         # Multi-agent orchestration commands
 │   ├── *-review.md          # Code review commands
 │   └── *.md                 # Testing, research, utility commands
+├── skills/                   # Skills with shell scripts
+│   └── worktree/            # Git worktree skill
+│       ├── SKILL.md         # Skill definition
+│       └── scripts/         # Shell scripts
+│           └── worktree.sh  # Main worktree script
 ├── migrate_from_claude.py   # Migration script
 └── README.md                # This file
 ```
@@ -421,6 +426,47 @@ gh auth status
 # 4. Review generated files
 ls -la working-docs/analysis/issue-*/
 ```
+
+## Skills
+
+OpenCode supports skills - shell script-based automation that executes deterministically without model invocation.
+
+### Available Skills
+
+#### `/worktree` - Git Worktree with Config Sync
+
+Create a git worktree and automatically copy important gitignored files (configs, .env, IDE settings).
+
+**Usage:**
+```bash
+# Auto-generate both path and branch
+/worktree
+
+# Specify path only
+/worktree ../my-feature
+
+# Specify both path and branch
+/worktree ../my-feature feature/new-auth
+```
+
+**What it does:**
+1. Validates git repository
+2. Creates worktree at specified path
+3. Parses .gitignore to find files to sync
+4. Copies config files (excludes node_modules, .venv, etc.)
+5. Reports what was copied
+
+**Copied files:** `.env*`, `.claude/settings.local.json`, `config/local.*`
+
+**Excluded:** `node_modules/`, `.venv/`, `__pycache__/`, `dist/`, `build/`, etc.
+
+### Skills Discovery
+
+OpenCode discovers skills from multiple locations:
+- `.opencode/skills/<name>/SKILL.md` (project-specific)
+- `.claude/skills/<name>/SKILL.md` (auto-reads Claude skills!)
+- `~/.config/opencode/skills/` (global)
+- `~/.claude/skills/` (global, shared with Claude Code)
 
 ## Documentation
 

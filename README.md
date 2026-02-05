@@ -12,10 +12,11 @@ A centralized toolkit for AI coding assistants, providing reusable agents, comma
 
 | CLI | Configuration | Location |
 |-----|--------------|----------|
-| **Claude Code** | Sub-agents + slash commands | `.claude/` |
-| **Codex CLI** | AGENTS.md + commands | `.codex/` |
-| **Factory CLI** | AGENTS.md + droids | `.factory/` |
-| **Copilot CLI** | AGENTS.md + prompts | `.github/` |
+| **Claude Code** | Sub-agents + commands + skills | `.claude/` |
+| **Codex CLI** | AGENTS.md + commands + skills | `.codex/` |
+| **Factory CLI** | AGENTS.md + droids + skills | `.factory/` |
+| **OpenCode CLI** | Agents + commands + skills | `.opencode/` |
+| **Copilot CLI** | AGENTS.md + prompts + skills | `.github/` |
 
 ## Repository Map
 
@@ -25,14 +26,22 @@ code-agent-octopus/
 ├── CLAUDE.md                  # Claude Code specific guidance
 ├── .claude/
 │   ├── agents/                # Claude Code sub-agents
-│   └── commands/              # Slash commands (Context7-enabled)
+│   ├── commands/              # Slash commands (Context7-enabled)
+│   └── skills/                # Skills with shell scripts (automation)
 ├── .codex/
-│   └── commands/              # Codex CLI command mirrors
+│   ├── commands/              # Codex CLI command mirrors
+│   └── skills/                # Codex CLI skills (worktree, etc.)
 ├── .factory/
 │   ├── droids/                # Canonical agent templates (source of truth)
-│   └── commands/              # Canonical command templates
+│   ├── commands/              # Canonical command templates
+│   └── skills/                # Factory CLI skills (worktree, etc.)
+├── .opencode/
+│   ├── agent/                 # OpenCode CLI agents (flat structure)
+│   ├── command/               # OpenCode CLI commands (flat structure)
+│   └── skills/                # OpenCode CLI skills (worktree, etc.)
 ├── .github/
-│   └── prompts/               # GitHub Actions/Copilot prompts
+│   ├── prompts/               # GitHub Actions/Copilot prompts
+│   └── skills/                # GitHub Copilot CLI skills (worktree, etc.)
 └── docs/
     └── claude-code/           # Guides for commands, agents, hooks
 ```
@@ -45,8 +54,20 @@ code-agent-octopus/
   Security, performance, testing, and bug-finding specialists that rely on Context7 lookups for framework-specific guidance.
 - **Research & Memory Commands** (`.factory/commands/research/*.md`, `.factory/commands/context-memory/*.md`)  
   Provide repeatable flows for consulting Context7, capturing findings, and replaying project memory.
-- **Testing & Tooling Hooks** (`.factory/commands/testing/*.md`, `.claude/commands/testing/*.md`)  
+- **Testing & Tooling Hooks** (`.factory/commands/testing/*.md`, `.claude/commands/testing/*.md`)
   Automate Playwright, Chrome DevTools MCP, and quality checks across both CLIs.
+- **Skills** (`.claude/skills/`)
+  Shell script-based automation invoked via `/skill-name`. Skills execute scripts directly without model invocation, ideal for deterministic operations like git worktree management.
+
+## Skills vs Commands vs Agents
+
+| Type | Location | Invocation | Model | Use Case |
+|------|----------|------------|-------|----------|
+| **Agents** | `.claude/agents/` | `Task(subagent_type="X")` | Yes | Complex reasoning, analysis |
+| **Commands** | `.claude/commands/` | `/namespace:command` | Yes | Guided workflows |
+| **Skills** | `.claude/skills/` | `/skill-name` | No | Deterministic scripts |
+
+**Key Difference**: Skills use `disable-model-invocation: true` to run scripts directly.
 
 ## Working With Templates
 
@@ -72,19 +93,36 @@ cp -r .factory/commands/* .codex/commands/
 ### Claude Code
 ```bash
 claude
-/agents      # List sub-agents
+/agents                        # List sub-agents
 /planning:agentic-jira-task-analyze PROJ-123
+/worktree                      # Create git worktree with config sync
 ```
 
-### Codex/Factory CLI
+### Codex CLI
 ```bash
-codex        # or: factory droid code
+codex
 # AGENTS.md auto-loads project context
+/worktree                      # Create git worktree with config sync
+```
+
+### Factory CLI
+```bash
+factory droid code
+# AGENTS.md auto-loads, droids available
+/worktree                      # Create git worktree with config sync
+```
+
+### OpenCode CLI
+```bash
+opencode
+@planning-implementation       # Invoke agent with @mention
+/worktree                      # Create git worktree with config sync
 ```
 
 ### Copilot CLI
 ```bash
 gh copilot   # Reads AGENTS.md and .github/copilot-instructions.md
+/worktree                      # Create git worktree with config sync
 ```
 
 ## Documentation
@@ -95,6 +133,7 @@ gh copilot   # Reads AGENTS.md and .github/copilot-instructions.md
 - **[Custom Slash Commands](docs/claude-code/custom-slash-commands.md)** – Patterns for reusable workflows
 - **[Sub-Agents Guide](docs/claude-code/sub-agents-guide.md)** – Designing specialized assistants
 - **[Hooks Guide](docs/claude-code/hooks-guide.md)** – Event-driven automation
+- **[Skills (Official Docs)](https://docs.anthropic.com/en/docs/claude-code/skills)** – Shell script automation
 
 ### Official References
 - [Claude Code](https://docs.anthropic.com/en/docs/claude-code) · [Codex CLI](https://developers.openai.com/codex/cli) · [Factory CLI](https://docs.factory.ai/factory-cli) · [Copilot CLI](https://docs.github.com/en/copilot/concepts/agents/about-copilot-cli)
