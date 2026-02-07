@@ -25,7 +25,7 @@ CAR_BRANDS=(
     "acura" "mazda" "subaru" "nissan" "hyundai" "kia" "volvo" "tesla" "rivian"
     "bentley" "rollsroyce" "aston" "mclaren" "bugatti" "pagani" "koenigsegg"
     "alpine" "lotus" "morgan" "mini" "fiat" "alfa" "lancia" "peugeot" "renault"
-    "citroen" "skoda" "seat" "opel" "saab" "lada" "dacia" "suzuki" "mitsubishi"
+    "citroen" "skoda" "seat" "opel" "saab" "dacia" "suzuki" "mitsubishi"
 )
 
 # Blacklist of heavy directories (never copy these)
@@ -94,7 +94,7 @@ get_random_car() {
 is_blacklisted() {
     local path="$1"
     local bname
-    bname=$(basename "$path")
+    bname="${path##*/}"
 
     for pattern in "${BLACKLIST[@]}"; do
         if [[ "$bname" == $pattern ]]; then
@@ -302,6 +302,15 @@ main() {
         echo ""
         echo -e "${BLUE}Scanning gitignored files...${NC}"
 
+        # Build find prune expression from BLACKLIST to skip heavy directories
+        local find_prune_args=()
+        for bl in "${BLACKLIST[@]}"; do
+            if [[ ${#find_prune_args[@]} -gt 0 ]]; then
+                find_prune_args+=("-o")
+            fi
+            find_prune_args+=("-name" "$bl")
+        done
+
         # Read gitignore and find matching files
         while IFS= read -r pattern || [[ -n "$pattern" ]]; do
             # Skip comments and empty lines
@@ -320,7 +329,7 @@ main() {
 
             # Find matching files
             local found_files
-            found_files=$(find "$source_dir" -name "$pattern" 2>/dev/null || true)
+            found_files=$(find "$source_dir" \( "${find_prune_args[@]}" \) -prune -o -name "$pattern" -print 2>/dev/null || true)
 
             while IFS= read -r file; do
                 [[ -z "$file" ]] && continue
