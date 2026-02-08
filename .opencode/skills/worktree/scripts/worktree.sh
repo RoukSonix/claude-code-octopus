@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 #
-# Git Worktree with Gitignored Files Sync
+# Git Worktree with Gitignored Files Sync (macOS/Linux)
 # Creates a git worktree and copies important gitignored files
 #
-# Compatible with bash 3.2+ (macOS default)
+# Compatible with bash 3.2+ (macOS default) and Linux
+# For Windows, use worktree.ps1 (PowerShell 5.1+)
 #
 
 set -euo pipefail
