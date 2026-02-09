@@ -10,12 +10,27 @@ compatibility: opencode
 
 Create a git worktree and automatically copy important gitignored files (configs, .env, IDE settings) while excluding heavy dependencies like node_modules.
 
+## Platform Support
+
+This skill works on **macOS**, **Linux**, and **Windows**:
+
+| OS | Script | Shell |
+|----|--------|-------|
+| macOS / Linux | `worktree.sh` | Bash 3.2+ |
+| Windows | `worktree.ps1` | PowerShell 5.1+ |
+
 ## Usage
 
-Run the worktree script:
+### macOS / Linux
 
 ```bash
 bash .opencode/skills/worktree/scripts/worktree.sh $ARGUMENTS
+```
+
+### Windows (PowerShell)
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .opencode\skills\worktree\scripts\worktree.ps1 $ARGUMENTS
 ```
 
 ## What This Skill Does
@@ -75,7 +90,7 @@ Heavy directories are always excluded:
 /worktree /tmp/worktree-test develop
 ```
 
-## Output Example
+## Output Example (macOS/Linux)
 
 ```
 Source repository: /Users/dev/my-project
@@ -109,6 +124,40 @@ Excluded (heavy directories):
 
 Next Steps:
   1. cd /Users/dev/my-project-feature
+  2. Install dependencies if needed
+  3. Start working on your changes
+```
+
+## Output Example (Windows)
+
+```
+Source repository: C:\Users\dev\my-project
+Branch: feature/auth
+Worktree path: C:\Users\dev\my-project-feature
+
+Creating git worktree...
+Worktree created successfully
+
+Scanning gitignored files...
+Copying gitignored files...
+  + .env (234 B)
+  + .env.local (128 B)
+  + .claude\settings.local.json (1 KB)
+
+========================================
+Git Worktree Created Successfully
+========================================
+
+Worktree Details:
+  Path:   C:\Users\dev\my-project-feature
+  Branch: feature/auth
+  Source: C:\Users\dev\my-project
+
+Copied Files:
+  Total: 3 files, 1 KB
+
+Next Steps:
+  1. cd C:\Users\dev\my-project-feature
   2. Install dependencies if needed
   3. Start working on your changes
 ```
