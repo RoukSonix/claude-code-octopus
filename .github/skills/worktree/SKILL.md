@@ -17,6 +17,12 @@ Run the worktree script:
 bash .github/skills/worktree/scripts/worktree.sh $ARGUMENTS
 ```
 
+## Execution Requirements
+
+**IMPORTANT: Set bash timeout to 300000ms (5 minutes) when running this script.**
+
+In large repositories the file scanning and copying phase may take several minutes. The default agent timeout (60-180 seconds) is often insufficient. When invoking the script via Bash tool, always specify `timeout: 300000`.
+
 ## What This Skill Does
 
 1. **Validates** the current directory is a git repository
