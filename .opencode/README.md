@@ -14,11 +14,15 @@ This directory contains OpenCode CLI agents and commands, migrated from Claude C
 │   ├── agentic-*.md         # Multi-agent orchestration commands
 │   ├── *-review.md          # Code review commands
 │   └── *.md                 # Testing, research, utility commands
-├── skills/                   # Skills with shell scripts
-│   └── worktree/            # Git worktree skill
-│       ├── SKILL.md         # Skill definition
-│       └── scripts/         # Shell scripts
-│           └── worktree.sh  # Main worktree script
+├── skills/                   # Skills (script-based and model-invocation)
+│   ├── worktree/            # Git worktree skill (script-based)
+│   │   ├── SKILL.md
+│   │   └── scripts/
+│   │       └── worktree.sh
+│   └── jira-parallel-execution-planner/  # Jira planning skill (model-invocation)
+│       ├── SKILL.md
+│       └── references/
+│           └── analysis-checklist.md
 ├── migrate_from_claude.py   # Migration script
 └── README.md                # This file
 ```
@@ -429,7 +433,9 @@ ls -la working-docs/analysis/issue-*/
 
 ## Skills
 
-OpenCode supports skills - shell script-based automation that executes deterministically without model invocation.
+OpenCode supports skills -- reusable instruction sets that come in two types:
+- **Script-based** (e.g., `/worktree`) -- execute shell scripts deterministically with `disable-model-invocation: true`
+- **Model-invocation** (e.g., `/jira-parallel-execution-planner`) -- provide structured instructions for the model to follow using tools
 
 ### Available Skills
 
@@ -459,6 +465,26 @@ Create a git worktree and automatically copy important gitignored files (configs
 **Copied files:** `.env*`, `.claude/settings.local.json`, `config/local.*`
 
 **Excluded:** `node_modules/`, `.venv/`, `__pycache__/`, `dist/`, `build/`, etc.
+
+#### `/jira-parallel-execution-planner` - Jira Delivery Planning
+
+Analyze a Jira task and its dependency graph, validate execution sequence and parallelization constraints, assess codebase readiness, and produce both an implementation plan and a parallel subagent execution plan.
+
+**Usage:**
+```bash
+/jira-parallel-execution-planner PROJ-123
+/jira-parallel-execution-planner https://jira.example.com/browse/PROJ-123
+```
+
+**What it does:**
+1. Fetches primary Jira task details (summary, criteria, status, priority)
+2. Collects all linked tasks and builds dependency map
+3. Validates execution order and parallelization claims
+4. Assesses codebase readiness per requirement (ready/partial/blocked)
+5. Builds ordered implementation plan with phases
+6. Builds parallel subagent execution plan with ownership boundaries
+
+**Output structure:** Uses `references/analysis-checklist.md` template with sections for dependency map, parallelization validation, codebase readiness matrix, implementation plan, and subagent plan.
 
 ### Skills Discovery
 
