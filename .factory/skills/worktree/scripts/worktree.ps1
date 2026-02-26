@@ -36,8 +36,13 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
-# Constants
-$MAX_FILE_SIZE_BYTES = 10485760  # 10MB
+# Disable PS 7.4+ behavior where native command failures become terminating errors
+if ($PSVersionTable.PSVersion.Major -ge 7) {
+    $PSNativeCommandUseErrorActionPreference = $false
+}
+
+# Constants (readonly)
+Set-Variable -Name MAX_FILE_SIZE_BYTES -Value 10485760 -Option ReadOnly -Scope Script  # 10MB
 
 # Car brands for random branch naming
 $CAR_BRANDS = @(
@@ -87,10 +92,7 @@ function Write-ColorOutput {
         [string]$Message,
         [ConsoleColor]$Color = [ConsoleColor]::White
     )
-    $prev = $Host.UI.RawUI.ForegroundColor
-    $Host.UI.RawUI.ForegroundColor = $Color
-    Write-Host $Message
-    $Host.UI.RawUI.ForegroundColor = $prev
+    Write-Host $Message -ForegroundColor $Color
 }
 
 function Write-Info    { param([string]$Msg) Write-ColorOutput $Msg -Color Cyan }
@@ -127,18 +129,53 @@ function Format-FileSize {
 }
 
 function Get-UnixTimestamp {
-    return [long](([System.DateTimeOffset]::UtcNow).ToUnixTimeSeconds())
+    # Compatible with .NET Framework 4.5+ (PowerShell 5.1 on older Windows)
+    $epoch = [datetime]::new(1970, 1, 1, 0, 0, 0, [System.DateTimeKind]::Utc)
+    return [long][math]::Floor(([datetime]::UtcNow - $epoch).TotalSeconds)
+}
+
+function Invoke-GitCommand {
+    <#
+    .SYNOPSIS
+        Runs a git command safely, preventing stderr from becoming a terminating error.
+    .DESCRIPTION
+        PowerShell wraps stderr lines as ErrorRecord objects. With ErrorActionPreference=Stop,
+        git's informational stderr messages (e.g. "Preparing worktree...") would throw exceptions
+        before LASTEXITCODE can be checked. This helper temporarily sets Continue to avoid that.
+    #>
+    param([string[]]$Arguments)
+
+    $prevEAP = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+    try {
+        $rawOutput = & git @Arguments 2>&1
+        $exitCode = $LASTEXITCODE
+        # Convert ErrorRecord objects to strings
+        $output = $rawOutput | ForEach-Object { $_.ToString() }
+        return @{ Output = $output; ExitCode = $exitCode }
+    }
+    finally {
+        $ErrorActionPreference = $prevEAP
+    }
 }
 
 function Invoke-Cleanup {
-    if ($script:WorktreePathForCleanup -and (Test-Path $script:WorktreePathForCleanup)) {
-        Write-Warn "Cleaning up partial worktree at: $($script:WorktreePathForCleanup)"
-        try {
-            & git worktree remove --force $script:WorktreePathForCleanup 2>$null
-        }
-        catch {
-            Remove-Item -Recurse -Force $script:WorktreePathForCleanup -ErrorAction SilentlyContinue
-        }
+    $pathToClean = $script:WorktreePathForCleanup
+    $script:WorktreePathForCleanup = ""  # Prevent double cleanup
+
+    if (-not $pathToClean) { return }
+    if ($pathToClean.Length -lt 5) { return }  # Safety: prevent root deletion
+    if (-not (Test-Path -LiteralPath $pathToClean)) { return }
+
+    Write-Warn "Cleaning up partial worktree at: $pathToClean"
+    try {
+        $null = Invoke-GitCommand @("worktree", "remove", "--force", $pathToClean)
+    }
+    catch {}
+
+    if (Test-Path -LiteralPath $pathToClean -PathType Container) {
+        try { Remove-Item -LiteralPath $pathToClean -Recurse -Force -ErrorAction Stop }
+        catch { Write-Warn "Warning: Could not fully clean up: $pathToClean" }
     }
 }
 
@@ -152,6 +189,20 @@ function Test-PathContainsBlacklisted {
         }
     }
     return @{ Blocked = $false; DirName = "" }
+}
+
+function Get-RelativePath {
+    <#
+    .SYNOPSIS
+        Extracts a relative path from a full path given a base directory.
+        Handles drive roots and trailing separators safely.
+    #>
+    param(
+        [string]$FullPath,
+        [string]$BaseDir
+    )
+    $normalizedBase = $BaseDir.TrimEnd('\', '/') + [IO.Path]::DirectorySeparatorChar
+    return $FullPath.Substring($normalizedBase.Length)
 }
 
 # --- Main Logic ---
@@ -176,13 +227,13 @@ function Main {
     }
 
     # Step 1: Validate git repository
-    $gitDir = & git rev-parse --git-dir 2>&1
-    if ($LASTEXITCODE -ne 0) {
-        Write-Err "Error: Not a git repository"
-        exit 1
+    $result = Invoke-GitCommand @("rev-parse", "--git-dir")
+    if ($result.ExitCode -ne 0) {
+        throw "Not a git repository"
     }
 
-    $sourceDir = (& git rev-parse --show-toplevel 2>&1).Trim()
+    $result = Invoke-GitCommand @("rev-parse", "--show-toplevel")
+    $sourceDir = ($result.Output | Select-Object -First 1).Trim()
     # Normalize to native path separators
     $sourceDir = [System.IO.Path]::GetFullPath($sourceDir)
     $repoName = Split-Path $sourceDir -Leaf
@@ -205,11 +256,9 @@ function Main {
     }
 
     # Step 3.1: Validate branch name
-    & git check-ref-format --branch $Branch 2>&1 | Out-Null
-    if ($LASTEXITCODE -ne 0) {
-        Write-Err "Error: Invalid branch name: $Branch"
-        Write-Warn "Branch names cannot contain spaces, ~, ^, :, ?, *, [, or \"
-        exit 1
+    $result = Invoke-GitCommand @("check-ref-format", "--branch", $Branch)
+    if ($result.ExitCode -ne 0) {
+        throw "Invalid branch name: $Branch. Branch names cannot contain spaces, ~, ^, :, ?, *, [, or \"
     }
 
     Write-Info "Branch: $Branch"
@@ -222,10 +271,8 @@ function Main {
     Write-Info "Worktree path: $WorktreePath"
 
     # Step 5: Check if path exists
-    if (Test-Path $WorktreePath) {
-        Write-Err "Error: Path already exists: $WorktreePath"
-        Write-Warn "Suggestion: Try a different path like ${WorktreePath}-2"
-        exit 1
+    if (Test-Path -LiteralPath $WorktreePath) {
+        throw "Path already exists: $WorktreePath. Try a different path like ${WorktreePath}-2"
     }
 
     # Set up cleanup
@@ -233,13 +280,13 @@ function Main {
 
     # Step 6: Check if branch exists
     $branchExists = $false
-    & git show-ref --verify --quiet "refs/heads/$Branch" 2>$null
-    if ($LASTEXITCODE -eq 0) {
+    $result = Invoke-GitCommand @("show-ref", "--verify", "--quiet", "refs/heads/$Branch")
+    if ($result.ExitCode -eq 0) {
         $branchExists = $true
     }
     else {
-        & git show-ref --verify --quiet "refs/remotes/origin/$Branch" 2>$null
-        if ($LASTEXITCODE -eq 0) {
+        $result = Invoke-GitCommand @("show-ref", "--verify", "--quiet", "refs/remotes/origin/$Branch")
+        if ($result.ExitCode -eq 0) {
             $branchExists = $true
         }
     }
@@ -248,33 +295,20 @@ function Main {
     Write-Host ""
     Write-Info "Creating git worktree..."
 
-    try {
-        if ($branchExists) {
-            $output = & git worktree add $WorktreePath $Branch 2>&1
-            if ($LASTEXITCODE -ne 0) {
-                Write-Err "Error: Failed to create worktree"
-                Write-Host $output
-                Invoke-Cleanup
-                exit 1
-            }
-            Write-Host $output
+    if ($branchExists) {
+        $result = Invoke-GitCommand @("worktree", "add", $WorktreePath, $Branch)
+        if ($result.ExitCode -ne 0) {
+            throw "Failed to create worktree: $($result.Output -join "`n")"
         }
-        else {
-            Write-Warn "Branch '$Branch' does not exist. Creating new branch..."
-            $output = & git worktree add -b $Branch $WorktreePath 2>&1
-            if ($LASTEXITCODE -ne 0) {
-                Write-Err "Error: Failed to create worktree with new branch"
-                Write-Host $output
-                Invoke-Cleanup
-                exit 1
-            }
-            Write-Host $output
-        }
+        if ($result.Output) { $result.Output | ForEach-Object { Write-Host $_ } }
     }
-    catch {
-        Write-Err "Error: Failed to create worktree - $_"
-        Invoke-Cleanup
-        exit 1
+    else {
+        Write-Warn "Branch '$Branch' does not exist. Creating new branch..."
+        $result = Invoke-GitCommand @("worktree", "add", "-b", $Branch, $WorktreePath)
+        if ($result.ExitCode -ne 0) {
+            throw "Failed to create worktree with new branch: $($result.Output -join "`n")"
+        }
+        if ($result.Output) { $result.Output | ForEach-Object { Write-Host $_ } }
     }
 
     Write-Success "Worktree created successfully"
@@ -285,27 +319,33 @@ function Main {
     $skippedDirs = [System.Collections.Generic.List[string]]::new()
     [long]$totalSize = 0
 
-    if (Test-Path $gitignoreFile) {
+    if (Test-Path -LiteralPath $gitignoreFile) {
         Write-Host ""
         Write-Info "Scanning gitignored files..."
 
-        $patterns = Get-Content $gitignoreFile -ErrorAction SilentlyContinue | ForEach-Object {
+        $patterns = Get-Content -LiteralPath $gitignoreFile -Encoding UTF8 -ErrorAction SilentlyContinue | ForEach-Object {
             $line = $_.Trim()
             # Skip comments, empty lines, negation patterns
             if (-not $line -or $line.StartsWith('#') -or $line.StartsWith('!')) { return }
             # Remove trailing slash
             $line = $line.TrimEnd('/')
+            # Skip path patterns (contain / or \) — not supported by -Filter
+            if ($line -match '[/\\]') { return }
+            # Skip double-star patterns
+            if ($line.Contains('**')) { return }
+            # Strip leading / (root anchor — we search recursively anyway)
+            $line = $line.TrimStart('/')
             $line
         } | Where-Object { $_ }
 
         foreach ($pattern in $patterns) {
-            # Find matching files using Get-ChildItem with wildcard
+            # Find matching files using Get-ChildItem with -Filter
             $foundFiles = @()
             try {
                 # Search recursively, excluding blacklisted directories
-                $foundFiles = Get-ChildItem -Path $sourceDir -Filter $pattern -Recurse -File -ErrorAction SilentlyContinue |
+                $foundFiles = Get-ChildItem -LiteralPath $sourceDir -Filter $pattern -Recurse -File -ErrorAction SilentlyContinue |
                     Where-Object {
-                        $relPath = $_.FullName.Substring($sourceDir.Length + 1)
+                        $relPath = Get-RelativePath -FullPath $_.FullName -BaseDir $sourceDir
                         $check = Test-PathContainsBlacklisted $relPath
                         if ($check.Blocked -and $check.DirName) {
                             if (-not $script:SeenDirs.Contains($check.DirName)) {
@@ -328,8 +368,8 @@ function Main {
                 [void]$script:SeenFiles.Add($file.FullName)
 
                 # Skip files larger than MAX_FILE_SIZE_BYTES
-                if ($file.Length -gt $MAX_FILE_SIZE_BYTES) {
-                    $relPath = $file.FullName.Substring($sourceDir.Length + 1)
+                if ($file.Length -gt $script:MAX_FILE_SIZE_BYTES) {
+                    $relPath = Get-RelativePath -FullPath $file.FullName -BaseDir $sourceDir
                     Write-Warn "  Skipping large file: $relPath ($(Format-FileSize $file.Length))"
                     continue
                 }
@@ -348,20 +388,20 @@ function Main {
             ".env.test",
             ".env.test.local",
             ".env.production.local",
-            ".claude\settings.local.json",
-            "config\local.yaml",
-            "config\local.yml",
-            "config\local.json"
+            (Join-Path ".claude" "settings.local.json"),
+            (Join-Path "config" "local.yaml"),
+            (Join-Path "config" "local.yml"),
+            (Join-Path "config" "local.json")
         )
 
         foreach ($config in $commonConfigs) {
             $configPath = Join-Path $sourceDir $config
-            if (Test-Path $configPath -PathType Leaf) {
-                $fullPath = (Get-Item $configPath).FullName
+            if (Test-Path -LiteralPath $configPath -PathType Leaf) {
+                $fullPath = (Get-Item -LiteralPath $configPath).FullName
                 if ($script:SeenFiles.Contains($fullPath)) { continue }
                 [void]$script:SeenFiles.Add($fullPath)
 
-                $fileInfo = Get-Item $configPath
+                $fileInfo = Get-Item -LiteralPath $configPath
                 $filesToCopy.Add($fileInfo)
                 $totalSize += $fileInfo.Length
             }
@@ -378,18 +418,23 @@ function Main {
         Write-Info "Copying gitignored files..."
 
         foreach ($file in $filesToCopy) {
-            $relPath = $file.FullName.Substring($sourceDir.Length + 1)
+            $relPath = Get-RelativePath -FullPath $file.FullName -BaseDir $sourceDir
             $destPath = Join-Path $WorktreePath $relPath
             $destDir = Split-Path $destPath -Parent
 
             # Create parent directory
-            if (-not (Test-Path $destDir)) {
+            if (-not (Test-Path -LiteralPath $destDir)) {
                 New-Item -ItemType Directory -Path $destDir -Force | Out-Null
             }
 
-            # Copy file
+            # Copy file and preserve timestamps
             try {
-                Copy-Item -Path $file.FullName -Destination $destPath -Force
+                Copy-Item -LiteralPath $file.FullName -Destination $destPath -Force
+                # Preserve original timestamps (match bash cp -p behavior)
+                $destItem = Get-Item -LiteralPath $destPath
+                $destItem.LastWriteTime = $file.LastWriteTime
+                $destItem.CreationTime = $file.CreationTime
+
                 $fileSize = $file.Length
                 Write-Host "  " -NoNewline
                 Write-ColorOutput "+ $relPath ($(Format-FileSize $fileSize))" -Color Green
@@ -444,7 +489,8 @@ function Main {
     Write-Host "  3. Start working on your changes"
 }
 
-# Run main with cleanup trap
+# Run main with cleanup on any failure
+# Main uses throw instead of exit 1, so all errors are caught here
 try {
     Main
 }

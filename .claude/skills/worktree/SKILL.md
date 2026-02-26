@@ -36,7 +36,7 @@ bash .claude/skills/worktree/scripts/worktree.sh $ARGUMENTS
 ### Windows (PowerShell)
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .claude\skills\worktree\scripts\worktree.ps1 $ARGUMENTS
+powershell -ExecutionPolicy RemoteSigned -File .claude\skills\worktree\scripts\worktree.ps1 $ARGUMENTS
 ```
 
 ### Auto-Detection

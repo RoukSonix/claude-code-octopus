@@ -30,7 +30,7 @@ bash .opencode/skills/worktree/scripts/worktree.sh $ARGUMENTS
 ### Windows (PowerShell)
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .opencode\skills\worktree\scripts\worktree.ps1 $ARGUMENTS
+powershell -ExecutionPolicy RemoteSigned -File .opencode\skills\worktree\scripts\worktree.ps1 $ARGUMENTS
 ```
 
 ## What This Skill Does
