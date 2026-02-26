@@ -1,0 +1,4 @@
+interface:
+  display_name: "Jira Task Orchestrator"
+  short_description: "Plan Jira delivery and parallel execution"
+  default_prompt: "Use $jira-parallel-execution-planner to analyze a Jira task with linked issues, validate sequencing, assess codebase readiness, and produce implementation plus subagent parallel plans."

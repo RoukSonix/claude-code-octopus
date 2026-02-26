@@ -45,6 +45,12 @@ The correct script is selected based on the operating system:
 - On **Windows** (`$env:OS -eq 'Windows_NT'` or `OSTYPE` not set): use `worktree.ps1`
 - On **macOS/Linux** (`uname` available): use `worktree.sh`
 
+## Execution Requirements
+
+**IMPORTANT: Set bash timeout to 300000ms (5 minutes) when running this script.**
+
+In large repositories the file scanning and copying phase may take several minutes. The default agent timeout (60-180 seconds) is often insufficient. When invoking the script via Bash tool, always specify `timeout: 300000`.
+
 ## What This Skill Does
 
 1. **Validates** the current directory is a git repository

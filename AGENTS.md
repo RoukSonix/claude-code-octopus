@@ -45,6 +45,9 @@ code-agent-octopus/
 │   │   ├── testing/            # /testing:test-app-playwright
 │   │   ├── research/           # /research:use-context7
 │   │   └── context-memory/     # /context-memory:add-memory
+│   ├── skills/                 # Skills (script-based and model-invocation)
+│   │   ├── worktree/           # Git worktree with config sync (script-based)
+│   │   └── jira-parallel-execution-planner/  # Jira delivery planning (model-invocation)
 │   └── settings.local.json     # Local config (gitignored)
 ├── .codex/
 │   └── commands/               # Codex CLI command mirrors (same as .claude/commands)
@@ -166,6 +169,10 @@ Instructions with dynamic features:
 - **`/analyze-docs`** - PDF and Confluence document analysis with memory
 - **`/create-commit`** - Create git commits with staged changes
 - **`/quality-check-python`** - Python code quality checks
+
+**Skills** (`.claude/skills/`):
+- **`/worktree`** - Create git worktree with automatic gitignored files sync (configs, .env, IDE settings)
+- **`/jira-parallel-execution-planner`** - Analyze Jira task with linked issues, validate execution sequence and parallelization, assess codebase readiness, produce implementation + parallel subagent plans
 
 ### Key Workflows (Claude Code)
 

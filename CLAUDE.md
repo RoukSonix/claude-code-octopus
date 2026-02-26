@@ -47,6 +47,9 @@ code-agent-octopus/
 │   │   ├── testing/            # /testing:test-app-playwright
 │   │   ├── research/           # /research:use-context7
 │   │   └── context-memory/     # /context-memory:add-memory
+│   ├── skills/                 # Skills (script-based and model-invocation)
+│   │   ├── worktree/           # Git worktree with config sync (script-based)
+│   │   └── jira-parallel-execution-planner/  # Jira delivery planning (model-invocation)
 │   └── settings.local.json     # Local config (gitignored)
 ├── .opencode/
 │   ├── agent/                  # OpenCode agents (flat structure, 19 total)
@@ -176,6 +179,7 @@ Instructions with dynamic features:
 
 **Skills** (`.claude/skills/`):
 - **`/worktree`** - Create git worktree with automatic gitignored files sync (configs, .env, IDE settings)
+- **`/jira-parallel-execution-planner`** - Analyze Jira task with linked issues, validate execution sequence and parallelization, assess codebase readiness, produce implementation + parallel subagent plans
 
 ### Key Workflows (Claude Code)
 
@@ -403,48 +407,65 @@ codex
 
 ## Multi-Vendor Skills Distribution
 
-Skills are shell script-based automation that execute deterministically without model invocation. The `/worktree` skill is distributed across all supported CLI vendors.
+Skills are reusable instruction sets distributed across all supported CLI vendors. They come in two types:
+- **Script-based** (e.g., `/worktree`) - execute shell scripts deterministically with `disable-model-invocation: true`
+- **Model-invocation** (e.g., `/jira-parallel-execution-planner`) - provide structured instructions for the model to follow using tools
+
+### Available Skills
+
+| Skill | Type | Description |
+|-------|------|-------------|
+| **`/worktree`** | Script-based | Create git worktree with automatic gitignored files sync |
+| **`/jira-parallel-execution-planner`** | Model-invocation | Analyze Jira task dependencies, validate parallelization, produce execution plans |
 
 ### Skills Locations by Vendor
 
 | Vendor | Location | Auto-Discovery |
 |--------|----------|----------------|
-| **Claude Code** | `.claude/skills/worktree/` | Native |
-| **Codex CLI** | `.codex/skills/worktree/` | Native |
-| **Factory CLI** | `.factory/skills/worktree/` | Native |
-| **OpenCode** | `.opencode/skills/worktree/` | Native + reads `.claude/skills/` |
-| **GitHub Copilot** | `.github/skills/worktree/` | Native + reads `.claude/skills/` |
+| **Claude Code** | `.claude/skills/<name>/` | Native |
+| **Codex CLI** | `.codex/skills/<name>/` | Native |
+| **Factory CLI** | `.factory/skills/<name>/` | Native |
+| **OpenCode** | `.opencode/skills/<name>/` | Native + reads `.claude/skills/` |
+| **GitHub Copilot** | `.github/skills/<name>/` | Native + reads `.claude/skills/` |
 
 ### Skill Format Compatibility
 
-All vendors use the same `SKILL.md` + `scripts/` structure:
+All vendors use the same `SKILL.md` base structure:
 
 ```
-.{vendor}/skills/worktree/
+.{vendor}/skills/<name>/
 ├── SKILL.md              # YAML frontmatter + documentation
-└── scripts/
-    └── worktree.sh       # Executable shell script
+├── references/           # Optional reference templates (e.g., analysis-checklist.md)
+├── scripts/              # Optional shell scripts (script-based skills only)
+└── agents/               # Optional agent configs (vendor-specific, e.g., openai.yaml)
 ```
 
 ### Key Differences
 
-- **Claude Code**: Uses `allowed-tools` and `disable-model-invocation: true`
-- **Codex CLI**: Uses simplified frontmatter (name, description, argument-hint)
+- **Claude Code**: Uses `allowed-tools` and optionally `disable-model-invocation: true`
+- **Codex CLI**: Uses simplified frontmatter (name, description, argument-hint); may include `agents/openai.yaml`
 - **Factory CLI**: Droid auto-matches by description
 - **OpenCode**: Adds `license` and `compatibility` fields
 - **GitHub Copilot**: Same format as OpenCode
 
 ### Syncing Skills
 
-When updating the worktree skill:
+When updating skills:
 
-1. **Edit source**: Modify `.claude/skills/worktree/`
+1. **Edit source**: Modify `.claude/skills/<name>/`
 2. **Copy to vendors**:
    ```bash
-   cp -r .claude/skills/worktree/scripts/* .codex/skills/worktree/scripts/
-   cp -r .claude/skills/worktree/scripts/* .factory/skills/worktree/scripts/
-   cp -r .claude/skills/worktree/scripts/* .opencode/skills/worktree/scripts/
-   cp -r .claude/skills/worktree/scripts/* .github/skills/worktree/scripts/
+   # For script-based skills (sync scripts)
+   cp -r .claude/skills/<name>/scripts/* .codex/skills/<name>/scripts/
+   cp -r .claude/skills/<name>/scripts/* .factory/skills/<name>/scripts/
+   cp -r .claude/skills/<name>/scripts/* .opencode/skills/<name>/scripts/
+   cp -r .claude/skills/<name>/scripts/* .github/skills/<name>/scripts/
+
+   # For all skills (sync references)
+   cp -r .claude/skills/<name>/references/* .codex/skills/<name>/references/
+   cp -r .claude/skills/<name>/references/* .factory/skills/<name>/references/
+   cp -r .claude/skills/<name>/references/* .opencode/skills/<name>/references/
+   cp -r .claude/skills/<name>/references/* .github/skills/<name>/references/
    ```
 3. **Update SKILL.md** for each vendor if frontmatter differs
 4. **Test** skill invocation in each CLI
