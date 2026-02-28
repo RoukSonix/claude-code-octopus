@@ -12,38 +12,23 @@ Create a git worktree and automatically copy important gitignored files (configs
 
 ## Platform Support
 
-This skill works on **macOS**, **Linux**, and **Windows**:
+This skill works on **macOS**, **Linux**, and **Windows** using a single Python script.
 
-| OS | Script | Shell |
-|----|--------|-------|
-| macOS / Linux | `worktree.sh` | Bash 3.2+ |
-| Windows | `worktree.ps1` | PowerShell 5.1+ |
+**Requirements:** Python 3.7+ (pre-installed on macOS and most Linux distributions)
 
 ## Usage
 
-### macOS / Linux
+### All Platforms (Universal)
 
 ```bash
-bash ~/.claude/skills/worktree/scripts/worktree.sh $ARGUMENTS
+python3 .claude/skills/worktree/scripts/worktree.py $ARGUMENTS
 ```
 
-Or if installed in project:
-
-```bash
-bash .claude/skills/worktree/scripts/worktree.sh $ARGUMENTS
-```
-
-### Windows (PowerShell)
+Or on Windows:
 
 ```powershell
-powershell -ExecutionPolicy RemoteSigned -File .claude\skills\worktree\scripts\worktree.ps1 $ARGUMENTS
+python .claude/skills/worktree/scripts/worktree.py $ARGUMENTS
 ```
-
-### Auto-Detection
-
-The correct script is selected based on the operating system:
-- On **Windows** (`$env:OS -eq 'Windows_NT'` or `OSTYPE` not set): use `worktree.ps1`
-- On **macOS/Linux** (`uname` available): use `worktree.sh`
 
 ## Execution Requirements
 
@@ -108,45 +93,7 @@ Heavy directories are always excluded:
 /worktree /tmp/worktree-test develop
 ```
 
-## Output Example (macOS/Linux)
-
-```
-Source repository: /Users/dev/my-project
-Branch: feature/auth
-Worktree path: /Users/dev/my-project-feature
-
-Creating git worktree...
-Worktree created successfully
-
-Scanning gitignored files...
-Copying gitignored files...
-  + .env (234 B)
-  + .env.local (128 B)
-  + .claude/settings.local.json (1 KB)
-
-========================================
-Git Worktree Created Successfully
-========================================
-
-Worktree Details:
-  Path:   /Users/dev/my-project-feature
-  Branch: feature/auth
-  Source: /Users/dev/my-project
-
-Copied Files:
-  Total: 3 files, 1 KB
-
-Excluded (heavy directories):
-  - node_modules/ (skipped)
-  - .venv/ (skipped)
-
-Next Steps:
-  1. cd /Users/dev/my-project-feature
-  2. Install dependencies if needed
-  3. Start working on your changes
-```
-
-## Output Example (Windows)
+## Output Example
 
 ```
 Source repository: C:\Users\dev\my-project
@@ -167,9 +114,9 @@ Git Worktree Created Successfully
 ========================================
 
 Worktree Details:
-  Path:   C:\Users\dev\my-project-feature
+  Path:   /Users/dev/my-project-feature
   Branch: feature/auth
-  Source: C:\Users\dev\my-project
+  Source: /Users/dev/my-project
 
 Copied Files:
   Total: 3 files, 1 KB
@@ -179,7 +126,7 @@ Excluded (heavy directories):
   - .venv/ (skipped)
 
 Next Steps:
-  1. cd C:\Users\dev\my-project-feature
+  1. cd /Users/dev/my-project-feature
   2. Install dependencies if needed
   3. Start working on your changes
 ```
