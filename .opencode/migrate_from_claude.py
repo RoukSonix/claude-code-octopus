@@ -14,7 +14,6 @@ Key transformations:
 - Adapt orchestration syntax (Task tool → @ mentions)
 """
 
-import os
 import re
 import yaml
 from pathlib import Path
@@ -65,18 +64,20 @@ def transform_agent_frontmatter(frontmatter: Dict[str, Any], filename: str) -> D
     if 'tools' in frontmatter:
         opencode_fm['tools'] = tools_array_to_map(frontmatter['tools'])
 
-    # Add permissions based on whether agent needs Write access
-    permission = {'bash': {}}
-
+    # Add permissions based on whether agent needs Write access.
+    # OpenCode uses two layers: tools (bool on/off) and permission (allow/ask/deny).
+    # permission.edit controls all file modifications (write, patch, multiedit).
+    # permission.bash controls shell command execution with glob patterns.
     if agent_name in WRITE_AGENTS:
-        # Agents that create analysis artifacts need write permissions
-        permission['bash']['*'] = 'allow'
-        if 'tools' in opencode_fm and 'write' in opencode_fm['tools']:
-            opencode_fm['permission'] = permission
+        opencode_fm['permission'] = {
+            'edit': 'allow',
+            'bash': {'*': 'allow'},
+        }
     else:
-        # Other agents use conservative defaults
-        permission['bash']['*'] = 'ask'
-        opencode_fm['permission'] = permission
+        opencode_fm['permission'] = {
+            'edit': 'deny',
+            'bash': {'*': 'ask'},
+        }
 
     return opencode_fm
 
