@@ -5,6 +5,7 @@
 - **Claude Code** - Anthropic's CLI with sub-agents and slash commands (`.claude/`)
 - **Codex CLI** - OpenAI's CLI with AGENTS.md configuration (`.codex/`)
 - **Factory CLI** - Factory.ai's CLI with specialized Droids (`.factory/`)
+- **OpenCode CLI** - Multi-CLI toolkit with agents and commands (`.opencode/`)
 - **GitHub Copilot CLI** - GitHub's CLI that reads multiple instruction formats (`.github/`)
 
 **Key principle**: `.factory/` contains canonical templates that are synced to CLI-specific directories.
@@ -27,14 +28,15 @@ Both files coexist to support all tools. See `AGENTS.md` for build commands and 
 | **Claude Code** | `CLAUDE.md` | Markdown with detailed sections | Root directory (auto-loaded) |
 | **Codex CLI** | `AGENTS.md` | Plain Markdown with semantic headings | Root directory (auto-loaded) |
 | **Factory CLI** | `AGENTS.md` | Plain Markdown (same as Codex) | Root directory (auto-loaded) |
+| **OpenCode CLI** | `AGENTS.md` | Plain Markdown | Root directory (auto-loaded) |
 | **Copilot CLI** | `AGENTS.md`, `CLAUDE.md`, `.github/copilot-instructions.md` | Markdown with natural language | Multiple locations |
 
 ### Directory Structure
 
 ```
 code-agent-octopus/
-├── AGENTS.md                   # Vendor-neutral config (Codex, Factory, Copilot)
-├── CLAUDE.md                   # This file - Claude Code specific
+├── AGENTS.md                   # Vendor-neutral config (Codex, Factory, OpenCode, Copilot)
+├── CLAUDE.md                   # Claude Code specific guidance
 ├── .claude/
 │   ├── agents/                 # Claude Code sub-agents (YAML + Markdown)
 │   │   ├── planning-agents/    # Architecture, implementation planners
@@ -61,6 +63,10 @@ code-agent-octopus/
 │       ├── testing/
 │       ├── research/
 │       └── context-memory/
+├── .opencode/
+│   ├── agent/                  # OpenCode CLI agents (flat structure)
+│   ├── command/                # OpenCode CLI commands (flat structure)
+│   └── skills/                 # OpenCode CLI skills (worktree, etc.)
 ├── .github/
 │   └── prompts/                # GitHub Actions/Copilot prompts
 └── docs/
@@ -270,6 +276,9 @@ claude
 
    # Sync to Codex CLI
    cp -r .factory/commands/* .codex/commands/
+
+   # Sync to OpenCode CLI (via migration script)
+   python3 .opencode/migrate_from_claude.py
    ```
 3. **Validate** - Test in each CLI before committing
 
@@ -277,12 +286,13 @@ claude
 
 Different CLIs have different formats:
 
-| Feature | Claude Code | Codex/Factory CLI | Copilot CLI |
-|---------|-------------|-------------------|-------------|
-| **Agent Format** | YAML frontmatter + Markdown | N/A (uses AGENTS.md) | `.github/prompts/*.md` |
-| **Command Format** | YAML frontmatter + Markdown | Plain Markdown | Plain Markdown |
-| **Tool Permissions** | `allowed-tools` in frontmatter | CLI flags `--allow-tool` | CLI flags `--allow-tool` |
-| **MCP Support** | Native MCP integration | MCP via Agents SDK | MCP servers |
+| Feature | Claude Code | Codex/Factory CLI | OpenCode CLI | Copilot CLI |
+|---------|-------------|-------------------|--------------|-------------|
+| **Agent Format** | YAML frontmatter + Markdown | N/A (uses AGENTS.md) | YAML frontmatter + Markdown (flat) | `.github/prompts/*.md` |
+| **Command Format** | YAML frontmatter + Markdown | Plain Markdown | YAML frontmatter + Markdown (flat) | Plain Markdown |
+| **Tool Permissions** | `allowed-tools` in frontmatter | CLI flags `--allow-tool` | `tools: {}` map + `permission:` block | CLI flags `--allow-tool` |
+| **MCP Support** | Native MCP integration | MCP via Agents SDK | Native MCP integration | MCP servers |
+| **Execution Model** | Parallel agents supported | Sequential | Sequential only | Sequential |
 
 ### Maintaining Consistency
 
@@ -291,8 +301,9 @@ When updating templates:
 1. **Update `.factory/`** first (canonical source)
 2. **Sync to `.claude/`** for Claude Code agents/commands
 3. **Sync to `.codex/`** for Codex CLI commands (if format compatible)
-4. **Update `AGENTS.md`** for general conventions shared across CLIs
-5. **Update this file** (`CLAUDE.md`) for Claude Code-specific guidance
+4. **Sync to `.opencode/`** for OpenCode CLI agents/commands (via migration script)
+5. **Update `AGENTS.md`** for general conventions shared across all CLIs
+6. **Update this file** (`CLAUDE.md`) for Claude Code-specific guidance
 
 ## Development Patterns
 
@@ -391,9 +402,10 @@ codex
 - **Context7 Docs**: https://context7.com
 
 ### Multi-CLI Resources
-- **AGENTS.md** (this repo) - Shared conventions for Codex, Factory, Copilot
+- **AGENTS.md** (this repo) - Shared conventions for Codex, Factory, OpenCode, Copilot
 - **OpenAI Codex Docs**: https://developers.openai.com/codex/cli
 - **Factory CLI Docs**: https://docs.factory.ai/factory-cli
+- **OpenCode CLI Docs**: https://opencode.ai/docs/
 - **GitHub Copilot CLI**: https://docs.github.com/en/copilot/concepts/agents/about-copilot-cli
 
 ## Security Considerations
@@ -410,6 +422,56 @@ codex
 - When syncing to multiple CLIs, audit tool permissions for each target
 - Different CLIs may interpret permissions differently
 - Test in sandboxed environment before production use
+
+## OpenCode CLI Specific
+
+### Key Differences from Claude Code
+
+| Aspect | Claude Code | OpenCode CLI |
+|--------|-------------|--------------|
+| **Directory Structure** | Nested (`.claude/agents/planning-agents/`) | Flat (`.opencode/agent/`) |
+| **Command Naming** | Namespace-based (`/planning:jira-task-analyze`) | Hyphenated (`/jira-task-analyze`) |
+| **Agent Invocation** | `Task(subagent_type="agent-name")` | `@agent-name` |
+| **Execution Model** | Parallel agents supported | Sequential execution only |
+| **Permission Model** | Tool-based (`allowed-tools: Task, Read, Write`) | Permission-based (tri-state: allow/ask/deny) |
+| **Tool Specification** | Array format (`tools: [Read, Write, Grep]`) | Boolean map (`tools: {read: true, write: true}`) |
+
+### OpenCode Frontmatter Format
+
+**Agent Frontmatter:**
+```yaml
+---
+description: "Brief explanation of agent purpose"
+mode: primary
+tools:
+  read: true
+  write: true
+  grep: true
+  mcp__context7__*: true
+permission:
+  bash:
+    "*": allow  # For agents that create artifacts
+---
+```
+
+**Command Frontmatter:**
+```yaml
+---
+description: "Command description"
+permission:
+  bash:
+    "git *": allow
+    "mkdir *": allow
+    "*": ask
+---
+```
+
+### Migration from Claude Code
+
+```bash
+# Run the migration script to sync changes
+python3 .opencode/migrate_from_claude.py
+```
 
 ## Quick Start for Different CLIs
 
@@ -434,6 +496,14 @@ factory droid code
 # Use factory templates from .factory/droids/
 ```
 
+### Using OpenCode CLI
+```bash
+opencode
+@planning-implementation       # Invoke agent with @mention
+/jira-task-analyze PROJ-123    # Run command
+/worktree                      # Create git worktree with config sync
+```
+
 ### Using Copilot CLI
 ```bash
 gh copilot
@@ -445,7 +515,7 @@ gh copilot
 
 When you improve an agent or command:
 
-1. Test in your target CLI (Claude Code, Codex, etc.)
+1. Test in your target CLI (Claude Code, Codex, OpenCode, etc.)
 2. Update the canonical source in `.factory/`
 3. Sync to other CLI directories if applicable
 4. Update both `AGENTS.md` and `CLAUDE.md` as needed
