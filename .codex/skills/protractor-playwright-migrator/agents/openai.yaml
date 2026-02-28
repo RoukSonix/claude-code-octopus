@@ -1,0 +1,5 @@
+interface:
+  display_name: "Protractor to Playwright Migrator"
+  short_description: "Plan and migrate Creatio tests to Playwright TestKit"
+  default_prompt: "Use $protractor-playwright-migrator $ARGUMENTS to migrate tests from Protractor to Playwright and produce a TestKit-compliant migration plan with chrome-devtools verification."
+  argument-hint: "[protractor-tests-location] [playwright-tests-destination]"

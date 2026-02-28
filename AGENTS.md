@@ -179,6 +179,7 @@ Instructions with dynamic features:
 **Skills** (`.claude/skills/`):
 - **`/worktree`** - Create git worktree with automatic gitignored files sync (configs, .env, IDE settings)
 - **`/jira-parallel-execution-planner`** - Analyze Jira task with linked issues, validate execution sequence and parallelization, assess codebase readiness, produce implementation + parallel subagent plans
+- **`/protractor-playwright-migrator`** - Migrate Creatio Protractor tests to Playwright TestKit with chrome-devtools verification
 
 ### Key Workflows (Claude Code)
 
