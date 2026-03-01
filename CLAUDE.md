@@ -50,7 +50,8 @@ code-agent-octopus/
 │   ├── skills/                 # Skills (script-based and model-invocation)
 │   │   ├── worktree/           # Git worktree with config sync (script-based)
 │   │   ├── jira-parallel-execution-planner/  # Jira delivery planning (model-invocation)
-│   │   └── protractor-playwright-migrator/  # Protractor-to-Playwright migration (model-invocation)
+│   │   ├── protractor-playwright-migrator/  # Protractor-to-Playwright migration (model-invocation)
+│   │   └── test-all/           # Test discovery and execution (model-invocation)
 │   └── settings.local.json     # Local config (gitignored)
 ├── .opencode/
 │   ├── agent/                  # OpenCode agents (flat structure, 19 total)
@@ -182,6 +183,7 @@ Instructions with dynamic features:
 - **`/worktree`** - Create git worktree with automatic gitignored files sync (configs, .env, IDE settings)
 - **`/jira-parallel-execution-planner`** - Analyze Jira task with linked issues, validate execution sequence and parallelization, assess codebase readiness, produce implementation + parallel subagent plans
 - **`/protractor-playwright-migrator`** - Migrate Creatio Protractor tests to Playwright TestKit with chrome-devtools verification
+- **`/test-all`** - Detect modified services, discover all test types, validate environment, run tests, produce structured report
 
 ### Key Workflows (Claude Code)
 
@@ -420,6 +422,7 @@ Skills are reusable instruction sets distributed across all supported CLI vendor
 | **`/worktree`** | Script-based | Create git worktree with automatic gitignored files sync |
 | **`/jira-parallel-execution-planner`** | Model-invocation | Analyze Jira task dependencies, validate parallelization, produce execution plans |
 | **`/protractor-playwright-migrator`** | Model-invocation | Migrate Protractor tests to Playwright TestKit with chrome-devtools verification |
+| **`/test-all`** | Model-invocation | Detect modified services, discover tests, run all suites, produce report |
 
 ### Skills Locations by Vendor
 
