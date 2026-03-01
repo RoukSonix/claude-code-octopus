@@ -70,7 +70,6 @@ def transform_agent_frontmatter(frontmatter: Dict[str, Any], filename: str) -> D
     # permission.edit controls all file modifications (write, edit, multiedit).
     # permission.bash controls shell command execution with glob patterns.
     tools_map = opencode_fm.get('tools', {})
-
     if agent_name in WRITE_AGENTS:
         opencode_fm['permission'] = {
             'edit': 'allow',
