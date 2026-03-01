@@ -23,7 +23,6 @@ This directory contains OpenCode CLI agents and commands, migrated from Claude C
 │       ├── SKILL.md
 │       └── references/
 │           └── analysis-checklist.md
-├── migrate_from_claude.py   # Migration script
 └── README.md                # This file
 ```
 
@@ -216,21 +215,6 @@ All agents and commands support MCP (Model Context Protocol) tools:
 - **Filesystem MCP** (`mcp__filesystem__*`): Deep codebase analysis
 - **Memory MCP** (`mcp__memory__*`): Knowledge persistence
 - **Playwright MCP** (`mcp__playwright__*`): Browser automation
-
-## Migration from Claude Code
-
-If you make changes to agents/commands in `.claude/` and want to sync to OpenCode:
-
-```bash
-# Run the migration script
-python3 .opencode/migrate_from_claude.py
-```
-
-This will:
-1. Read all agents from `.claude/agents/**/*.md`
-2. Read all commands from `.claude/commands/**/*.md`
-3. Transform frontmatter and content to OpenCode format
-4. Write to `.opencode/agent/` and `.opencode/command/`
 
 ## Working with Context7
 
