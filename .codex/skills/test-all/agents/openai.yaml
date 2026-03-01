@@ -1,0 +1,4 @@
+interface:
+  display_name: "Monorepo Test Runner"
+  short_description: "Detect changes, discover tests, run all suites"
+  default_prompt: "Use $test-all to detect modified services, discover all test types (unit, integration, component, e2e, performance), validate environment readiness, run tests, and produce a structured report."
