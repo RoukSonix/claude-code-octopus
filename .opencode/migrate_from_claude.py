@@ -30,6 +30,7 @@ WRITE_AGENTS = {
     'planning-performance-architect',
     'planning-bug-prevention',
     'planning-documentation',
+    'planning-best-practices',
 }
 
 def parse_frontmatter(content: str) -> tuple[Dict[str, Any], str]:
@@ -66,16 +67,18 @@ def transform_agent_frontmatter(frontmatter: Dict[str, Any], filename: str) -> D
 
     # Add permissions based on whether agent needs Write access.
     # OpenCode uses two layers: tools (bool on/off) and permission (allow/ask/deny).
-    # permission.edit controls all file modifications (write, patch, multiedit).
+    # permission.edit controls all file modifications (write, edit, multiedit).
     # permission.bash controls shell command execution with glob patterns.
+    tools_map = opencode_fm.get('tools', {})
     if agent_name in WRITE_AGENTS:
         opencode_fm['permission'] = {
             'edit': 'allow',
             'bash': {'*': 'allow'},
         }
     else:
+        has_edit = tools_map.get('edit', False) or tools_map.get('multiedit', False)
         opencode_fm['permission'] = {
-            'edit': 'deny',
+            'edit': 'allow' if has_edit else 'deny',
             'bash': {'*': 'ask'},
         }
 
