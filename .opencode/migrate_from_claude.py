@@ -76,7 +76,7 @@ def transform_agent_frontmatter(frontmatter: Dict[str, Any], filename: str) -> D
             'bash': {'*': 'allow'},
         }
     else:
-        has_edit = tools_map.get('edit', False) or tools_map.get('multiedit', False)
+        has_edit = tools_map.get('edit', False) or tools_map.get('multiedit', False) or tools_map.get('write', False)
         opencode_fm['permission'] = {
             'edit': 'allow' if has_edit else 'deny',
             'bash': {'*': 'ask'},
