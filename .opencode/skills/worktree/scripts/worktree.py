@@ -8,7 +8,6 @@ Compatible with Python 3.7+ on macOS, Linux, and Windows
 
 import argparse
 import fnmatch
-import os
 import random
 import shutil
 import subprocess
@@ -73,7 +72,7 @@ CAR_BRANDS = [
 ]
 
 # Blacklist of heavy directories (never copy these)
-BLACKLIST = {
+BLACKLIST_EXACT: Set[str] = {
     "node_modules",
     ".venv",
     "venv",
@@ -93,8 +92,12 @@ BLACKLIST = {
     "target",
     ".gradle",
     ".m2",
-    "*.egg-info",
 }
+
+# Blacklist glob patterns (checked via fnmatch)
+BLACKLIST_GLOBS: List[str] = [
+    "*.egg-info",
+]
 
 # Common config files to look for explicitly
 COMMON_CONFIGS = [
@@ -126,9 +129,13 @@ class Colors:
     @classmethod
     def disable(cls):
         """Disable colors (for non-terminal output)"""
-        cls.RED = cls.GREEN = cls.YELLOW = cls.BLUE = cls.CYAN = cls.MAGENTA = (
-            cls.NC
-        ) = ""
+        cls.RED = ""
+        cls.GREEN = ""
+        cls.YELLOW = ""
+        cls.BLUE = ""
+        cls.CYAN = ""
+        cls.MAGENTA = ""
+        cls.NC = ""
 
 
 def print_error(msg: str) -> None:
@@ -208,12 +215,10 @@ def is_blacklisted(path_part: str) -> bool:
     Returns:
         True if blacklisted
     """
-    # Check exact match
-    if path_part in BLACKLIST:
+    if path_part in BLACKLIST_EXACT:
         return True
-    # Check glob patterns
-    for pattern in BLACKLIST:
-        if "*" in pattern and fnmatch.fnmatch(path_part, pattern):
+    for pattern in BLACKLIST_GLOBS:
+        if fnmatch.fnmatch(path_part, pattern):
             return True
     return False
 
@@ -236,86 +241,66 @@ def format_size(size: int) -> str:
         return f"{size // (1024 * 1024)} MB"
 
 
-def find_git_ignored_files(
-    source_dir: Path, gitignore_path: Path
-) -> Tuple[List[Path], Set[str]]:
+def find_git_ignored_files(source_dir: Path) -> Tuple[List[Path], Set[str]]:
     """
-    Find files matching patterns in .gitignore
+    Find gitignored files using git ls-files
 
     Args:
         source_dir: Source directory path
-        gitignore_path: Path to .gitignore file
 
     Returns:
         Tuple of (files_to_copy, skipped_dirs)
     """
     files_to_copy: List[Path] = []
     skipped_dirs: Set[str] = set()
-    seen_files: Set[Path] = set()
-
-    if not gitignore_path.exists():
-        return files_to_copy, skipped_dirs
 
     print_info("Scanning gitignored files...")
 
-    # Read .gitignore patterns
-    patterns: List[str] = []
     try:
-        with open(gitignore_path, "r", encoding="utf-8") as f:
-            for line in f:
-                line = line.strip()
-                # Skip comments, empty lines, and negation patterns
-                if not line or line.startswith("#") or line.startswith("!"):
-                    continue
-                # Remove trailing slash (gitignore uses it for directories)
-                line = line.rstrip("/")
-                # Skip patterns with path separators or double stars (simplified matching)
-                if "/" in line or "\\" in line or "**" in line:
-                    continue
-                patterns.append(line)
-    except Exception as e:
-        print_warn(f"Warning: Could not read .gitignore: {e}")
+        result = subprocess.run(
+            ["git", "ls-files", "--others", "--ignored", "--exclude-standard"],
+            cwd=str(source_dir),
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if result.returncode != 0:
+            print_warn(f"Warning: git ls-files failed: {result.stderr.strip()}")
+            return files_to_copy, skipped_dirs
+    except FileNotFoundError:
+        print_warn("Warning: git command not found")
         return files_to_copy, skipped_dirs
 
-    # Walk directory tree
-    for root, dirs, files in os.walk(source_dir):
-        root_path = Path(root)
-        rel_root = root_path.relative_to(source_dir)
+    for line in result.stdout.splitlines():
+        line = line.strip()
+        if not line:
+            continue
 
-        # Filter out blacklisted directories
-        dirs_to_remove = []
-        for d in dirs:
-            if is_blacklisted(d):
-                skipped_dirs.add(d)
-                dirs_to_remove.append(d)
-        for d in dirs_to_remove:
-            dirs.remove(d)
+        rel_path = Path(line)
 
-        # Check files against patterns
-        for filename in files:
-            # Check if filename matches any pattern
-            for pattern in patterns:
-                if fnmatch.fnmatch(filename, pattern):
-                    file_path = root_path / filename
+        # Check each path component against blacklist
+        blacklisted = False
+        for part in rel_path.parts:
+            if is_blacklisted(part):
+                skipped_dirs.add(part)
+                blacklisted = True
+                break
+        if blacklisted:
+            continue
 
-                    # Skip if already seen
-                    if file_path in seen_files:
-                        break
-                    seen_files.add(file_path)
+        file_path = source_dir / rel_path
 
-                    # Check file size
-                    try:
-                        size = file_path.stat().st_size
-                        if size > MAX_FILE_SIZE_BYTES:
-                            rel_path = file_path.relative_to(source_dir)
-                            print_warn(
-                                f"  Skipping large file: {rel_path} ({format_size(size)})"
-                            )
-                            break
-                        files_to_copy.append(file_path)
-                    except OSError:
-                        pass
-                    break
+        # Check file size
+        try:
+            size = file_path.stat().st_size
+            if size > MAX_FILE_SIZE_BYTES:
+                print_warn(
+                    f"  Skipping large file: {rel_path} ({format_size(size)})"
+                )
+                continue
+            files_to_copy.append(file_path)
+        except OSError:
+            pass
 
     return files_to_copy, skipped_dirs
 
@@ -377,14 +362,14 @@ def cleanup_on_failure(worktree_path: Path) -> None:
                 capture_output=True,
                 check=False,
             )
-        except:
+        except Exception:
             pass
 
         # Remove directory if still exists
         if worktree_path.exists():
             try:
                 shutil.rmtree(worktree_path)
-            except:
+            except Exception:
                 pass
 
 
@@ -483,32 +468,24 @@ def main():
 
         print_success("Worktree created successfully")
 
-        # Step 7: Parse .gitignore and find files to copy
-        gitignore_path = source_dir / ".gitignore"
+        # Step 7: Find gitignored files using git ls-files
         files_to_copy: List[Path] = []
         skipped_dirs: Set[str] = set()
-        seen_files: Set[Path] = set()
-        total_size = 0
 
-        if gitignore_path.exists():
-            gitignore_files, skipped_dirs = find_git_ignored_files(
-                source_dir, gitignore_path
-            )
-            files_to_copy.extend(gitignore_files)
-            for f in gitignore_files:
-                seen_files.add(f)
-                try:
-                    total_size += f.stat().st_size
-                except:
-                    pass
+        gitignore_files, skipped_dirs = find_git_ignored_files(source_dir)
+        files_to_copy.extend(gitignore_files)
+        seen_files: Set[Path] = set(gitignore_files)
 
         # Step 8: Also explicitly look for common config files
         config_files = find_common_config_files(source_dir, seen_files)
         files_to_copy.extend(config_files)
-        for f in config_files:
+
+        # Single pass size calculation
+        total_size = 0
+        for f in files_to_copy:
             try:
                 total_size += f.stat().st_size
-            except:
+            except Exception:
                 pass
 
         # Step 9: Copy files
@@ -528,7 +505,7 @@ def main():
                             f"  {Colors.GREEN}+{Colors.NC} {rel_path} ({format_size(size)})"
                         )
                         copied_count += 1
-                    except:
+                    except Exception:
                         print(f"  {Colors.GREEN}+{Colors.NC} {rel_path}")
                         copied_count += 1
 

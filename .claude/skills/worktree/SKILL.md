@@ -2,7 +2,7 @@
 name: worktree
 description: Create git worktree with automatic sync of gitignored files (configs, .env, IDE settings). Use when setting up parallel development environments or working on multiple branches simultaneously.
 argument-hint: "[worktree-path] [branch]"
-allowed-tools: Bash(bash *), Bash(git *), Read, Glob
+allowed-tools: Bash(python3 *), Bash(python *), Bash(bash *), Bash(git *), Read, Glob
 disable-model-invocation: true
 ---
 
@@ -96,9 +96,9 @@ Heavy directories are always excluded:
 ## Output Example
 
 ```
-Source repository: C:\Users\dev\my-project
+Source repository: /Users/dev/my-project
 Branch: feature/auth
-Worktree path: C:\Users\dev\my-project-feature
+Worktree path: /Users/dev/my-project-feature
 
 Creating git worktree...
 Worktree created successfully
@@ -107,7 +107,7 @@ Scanning gitignored files...
 Copying gitignored files...
   + .env (234 B)
   + .env.local (128 B)
-  + .claude\settings.local.json (1 KB)
+  + .claude/settings.local.json (1 KB)
 
 ========================================
 Git Worktree Created Successfully

@@ -10,25 +10,22 @@ Create a git worktree and automatically copy important gitignored files (configs
 
 ## Platform Support
 
-This skill works on **macOS**, **Linux**, and **Windows**:
+This skill works on **macOS**, **Linux**, and **Windows** using a single Python script.
 
-| OS | Script | Shell |
-|----|--------|-------|
-| macOS / Linux | `worktree.sh` | Bash 3.2+ |
-| Windows | `worktree.ps1` | PowerShell 5.1+ |
+**Requirements:** Python 3.7+ (pre-installed on macOS and most Linux distributions)
 
 ## Usage
 
-### macOS / Linux
+### All Platforms (Universal)
 
 ```bash
-bash .factory/skills/worktree/scripts/worktree.sh $ARGUMENTS
+python3 .factory/skills/worktree/scripts/worktree.py $ARGUMENTS
 ```
 
-### Windows (PowerShell)
+Or on Windows:
 
 ```powershell
-powershell -ExecutionPolicy RemoteSigned -File .factory\skills\worktree\scripts\worktree.ps1 $ARGUMENTS
+python .factory/skills/worktree/scripts/worktree.py $ARGUMENTS
 ```
 
 ## Execution Requirements
@@ -42,7 +39,7 @@ In large repositories the file scanning and copying phase may take several minut
 1. **Validates** the current directory is a git repository
 2. **Generates** default path and branch if not specified
 3. **Creates** a new git worktree at the specified path
-4. **Parses** .gitignore to find files that should be synced
+4. **Finds** gitignored files using `git ls-files` for accurate matching
 5. **Copies** important config files while excluding heavy directories
 6. **Reports** what was copied and provides next steps
 
@@ -94,7 +91,7 @@ Heavy directories are always excluded:
 /worktree /tmp/worktree-test develop
 ```
 
-## Output Example (macOS/Linux)
+## Output Example
 
 ```
 Source repository: /Users/dev/my-project
@@ -128,40 +125,6 @@ Excluded (heavy directories):
 
 Next Steps:
   1. cd /Users/dev/my-project-feature
-  2. Install dependencies if needed
-  3. Start working on your changes
-```
-
-## Output Example (Windows)
-
-```
-Source repository: C:\Users\dev\my-project
-Branch: feature/auth
-Worktree path: C:\Users\dev\my-project-feature
-
-Creating git worktree...
-Worktree created successfully
-
-Scanning gitignored files...
-Copying gitignored files...
-  + .env (234 B)
-  + .env.local (128 B)
-  + .claude\settings.local.json (1 KB)
-
-========================================
-Git Worktree Created Successfully
-========================================
-
-Worktree Details:
-  Path:   C:\Users\dev\my-project-feature
-  Branch: feature/auth
-  Source: C:\Users\dev\my-project
-
-Copied Files:
-  Total: 3 files, 1 KB
-
-Next Steps:
-  1. cd C:\Users\dev\my-project-feature
   2. Install dependencies if needed
   3. Start working on your changes
 ```
