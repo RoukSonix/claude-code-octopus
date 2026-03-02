@@ -46,6 +46,7 @@ Combine all changed file paths. Map each changed file to its parent service dire
 - `Cargo.toml` (Rust)
 - `Gemfile` (Ruby)
 - `composer.json` (PHP)
+- `*.csproj` or `*.sln` (.NET / C#)
 - `Makefile` with test targets (generic)
 
 If the repository root itself is a single-service project (manifest at root level), treat the entire repo as one service.
@@ -70,6 +71,7 @@ For each affected service, scan for test runner configurations and classify test
 | `k6/` scripts or `*.k6.js` | k6 | performance |
 | `locustfile.py` or `locust/` | Locust | performance |
 | `artillery.yml` or `.artillery/` | Artillery | performance |
+| `*.csproj` + `*Tests` project | dotnet test | unit |
 
 Additionally, check `package.json` scripts for named test commands:
 
@@ -100,8 +102,8 @@ Produce a matrix: service x test-type with runner commands.
 For each service, check prerequisites:
 
 **Node.js services:**
-- `node_modules/` exists -> if not, suggest `npm install` / `yarn install` / `pnpm install`
-- Check for lockfile to determine package manager (package-lock.json / yarn.lock / pnpm-lock.yaml)
+- `node_modules/` exists -> if not, suggest `npm install` / `yarn install` / `pnpm install` / `bun install`
+- Check for lockfile to determine package manager (package-lock.json / yarn.lock / pnpm-lock.yaml / bun.lock)
 - `.env` or `.env.test` exists if referenced in configs
 
 **Python services:**
@@ -111,11 +113,15 @@ For each service, check prerequisites:
 
 **Go services:**
 - `go.sum` exists (modules downloaded)
-- Build succeeds (`go build ./...`)
+- Source valid (`go vet ./...`)
 
 **Java/Kotlin services:**
 - Build tool wrapper exists (`mvnw`, `gradlew`)
 - Dependencies cached (`~/.m2/repository` or `.gradle/`)
+
+**.NET services:**
+- .NET SDK installed (`dotnet --version`)
+- Dependencies restored (`dotnet restore` if `obj/` missing)
 
 **Integration/E2E prerequisites:**
 - Docker running (if docker-compose.yml or Dockerfile present in test config)
@@ -156,7 +162,7 @@ Common run commands by runner:
 |---|---|
 | Jest | `npx jest --ci --coverage --no-color` |
 | Vitest | `npx vitest run --coverage --reporter=verbose` |
-| pytest | `python -m pytest -v --tb=short --no-header` |
+| pytest | `python -m pytest -v --tb=short --no-header --cov` |
 | Playwright | `npx playwright test --reporter=list` |
 | Cypress | `npx cypress run --reporter spec` |
 | Mocha | `npx mocha --reporter spec --no-color` |
@@ -165,6 +171,9 @@ Common run commands by runner:
 | Gradle | `./gradlew test` |
 | k6 | `k6 run --summary-trend-stats="avg,p(95),p(99)" <script>` |
 | Locust | `locust --headless -u 1 -r 1 --run-time 30s` |
+| dotnet test | `dotnet test --no-build --verbosity normal` |
+
+Note: `--no-header` requires pytest >= 7.0. For older versions, remove this flag from the command.
 
 If `package.json` has specific named scripts (e.g., `test:unit`, `test:e2e`), prefer those over generic runner commands as they may include project-specific configuration.
 
