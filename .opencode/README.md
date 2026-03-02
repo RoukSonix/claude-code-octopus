@@ -19,10 +19,14 @@ This directory contains OpenCode CLI agents and commands, migrated from Claude C
 │   │   ├── SKILL.md
 │   │   └── scripts/
 │   │       └── worktree.sh
-│   └── jira-parallel-execution-planner/  # Jira planning skill (model-invocation)
+│   ├── jira-parallel-execution-planner/  # Jira planning skill (model-invocation)
+│   │   ├── SKILL.md
+│   │   └── references/
+│   │       └── analysis-checklist.md
+│   └── test-all/            # Test discovery and execution (model-invocation)
 │       ├── SKILL.md
 │       └── references/
-│           └── analysis-checklist.md
+│           └── test-report-template.md
 └── README.md                # This file
 ```
 
@@ -469,6 +473,26 @@ Analyze a Jira task and its dependency graph, validate execution sequence and pa
 6. Builds parallel subagent execution plan with ownership boundaries
 
 **Output structure:** Uses `references/analysis-checklist.md` template with sections for dependency map, parallelization validation, codebase readiness matrix, implementation plan, and subagent plan.
+
+#### `/test-all` - Automated Test Discovery and Execution
+
+Detect modified services, discover all test types, validate environment readiness, run tests, and produce a structured report.
+
+**Usage:**
+```bash
+/test-all
+/test-all --all
+/test-all services/api --base-branch=develop
+```
+
+**What it does:**
+1. Detects changed services via git diff
+2. Discovers test configurations (jest, vitest, pytest, playwright, etc.)
+3. Validates environment readiness (dependencies, configs, Docker)
+4. Runs tests in priority order (unit -> integration -> component -> e2e -> performance)
+5. Produces structured report with results matrix, failures, coverage
+
+**Output structure:** Uses `references/test-report-template.md` template with summary, results matrix, failure details, coverage, and recommendations.
 
 ### Skills Discovery
 

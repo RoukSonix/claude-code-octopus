@@ -49,7 +49,8 @@ code-agent-octopus/
 │   │   └── context-memory/     # /context-memory:add-memory
 │   ├── skills/                 # Skills (script-based and model-invocation)
 │   │   ├── worktree/           # Git worktree with config sync (script-based)
-│   │   └── jira-parallel-execution-planner/  # Jira delivery planning (model-invocation)
+│   │   ├── jira-parallel-execution-planner/  # Jira delivery planning (model-invocation)
+│   │   └── test-all/           # Test discovery and execution (model-invocation)
 │   └── settings.local.json     # Local config (gitignored)
 ├── .codex/
 │   └── commands/               # Codex CLI command mirrors (same as .claude/commands)
@@ -503,6 +504,7 @@ opencode
 @planning-implementation       # Invoke agent with @mention
 /jira-task-analyze PROJ-123    # Run command
 /worktree                      # Create git worktree with config sync
+/test-all                      # Run all tests for changed services
 ```
 
 ### Using Copilot CLI
