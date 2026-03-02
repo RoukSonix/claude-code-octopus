@@ -140,25 +140,61 @@ If a service is `needs-setup`, ask the user whether to run setup commands before
 
 ### 4. Run Tests
 
-Execute ALL test types discovered in Step 2. Run them in this order (fastest first), but never skip any type:
+#### 4a. Build Execution Queue
 
-1. **Unit tests** - timeout 5 minutes per service
-2. **Integration tests** - timeout 10 minutes per service
-3. **Component tests** - timeout 10 minutes per service
-4. **E2E tests** - timeout 15 minutes per service
-5. **Performance tests** - timeout 10 minutes per service
+From the Step 2 discovery matrix, build an execution queue listing every service + test-type combination. Output it to the user before running anything:
 
-Execution rules:
+```
+EXECUTION QUEUE (N entries):
+[ ] unit       - Jest (services/api), pytest (services/worker)
+[ ] integration - pytest (services/worker)
+[ ] e2e        - Playwright (services/web)
+[ ] performance - k6 (services/api)
+```
 
-- CRITICAL: run every test type from the Step 2 discovery matrix. Do not stop after unit or integration tests -- always continue through component, e2e, and performance tests
+This queue is a binding contract. Every entry MUST be executed before generating the report.
+
+Execution order by type (fastest first):
+
+| Type | Timeout per service |
+|---|---|
+| unit | 5 minutes |
+| integration | 10 minutes |
+| component | 10 minutes |
+| e2e | 15 minutes |
+| performance | 10 minutes |
+
+#### 4b. Execute Queue (checkpoint loop)
+
+Process entries one by one. After completing each entry:
+
+1. Run the test command for this entry
+2. Record exit code, stdout/stderr, duration, coverage
+3. Mark entry as done with result (PASSED / FAILED / ERROR / TIMEOUT)
+4. Output checkpoint showing remaining queue:
+
+```
+CHECKPOINT: 2/4 complete, 2 remaining:
+[x] unit        - PASSED (42 passed, 0 failed)
+[x] integration - FAILED (8 passed, 3 failed)
+[ ] e2e         - pending
+[ ] performance - pending
+>>> Continuing with: e2e
+```
+
+5. Continue to next entry. NEVER stop the loop early.
+
+**CRITICAL**: do NOT generate the final report (Step 6) until ALL queue entries show `[x]`. If a test type fails, mark it as FAILED and move to the next entry. The loop ends only when every entry has been processed.
+
+#### 4c. Execution Rules
+
 - Within a service, run test types sequentially in the order above
 - Capture full stdout/stderr for each test run
-- Record exit code, duration, and any coverage output
 - If a test suite fails, continue with remaining suites in that service and other services
 - Pass `--no-color` or equivalent flag when available for clean output parsing
 - Use `--coverage` or equivalent when the runner supports it
 
-Common run commands by runner:
+#### 4d. Common Run Commands
 
 | Runner | Command |
 |---|---|
@@ -198,10 +234,20 @@ Aggregate results:
 - Per test type: total pass/fail/skip across all services
 - Overall: grand totals
 
-Verify completeness:
+Verify completeness before proceeding to Step 6:
 
-- Cross-reference executed test types against the Step 2 discovery matrix
-- If any discovered test type was not executed, flag it as "NOT RUN" in the report with explanation
+- Every entry from the Step 4a execution queue must have a result (PASSED / FAILED / ERROR / TIMEOUT)
+- If any entry is missing a result, go back and execute it now
+- Output the final completed queue as confirmation:
+
+```
+ALL QUEUE ENTRIES PROCESSED (4/4):
+[x] unit        - PASSED
+[x] integration - FAILED
+[x] e2e         - PASSED
+[x] performance - PASSED
+>>> Proceeding to report generation
+```
 
 ### 6. Generate Report
 
