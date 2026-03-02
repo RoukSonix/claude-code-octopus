@@ -138,7 +138,7 @@ If a service is `needs-setup`, ask the user whether to run setup commands before
 
 ### 4. Run Tests
 
-Execute tests in priority order (fastest first):
+Execute ALL test types discovered in Step 2. Run them in this order (fastest first), but never skip any type:
 
 1. **Unit tests** - timeout 5 minutes per service
 2. **Integration tests** - timeout 10 minutes per service
@@ -148,6 +148,7 @@ Execute tests in priority order (fastest first):
 
 Execution rules:
 
+- CRITICAL: run every test type from the Step 2 discovery matrix. Do not stop after unit or integration tests -- always continue through component, e2e, and performance tests
 - For independent services, use parallel execution (e.g., `codex exec` with background jobs)
 - Within a service, run test types sequentially in the order above
 - Capture full stdout/stderr for each test run
@@ -195,6 +196,11 @@ Aggregate results:
 - Per service: total pass/fail/skip across all test types
 - Per test type: total pass/fail/skip across all services
 - Overall: grand totals
+
+Verify completeness:
+
+- Cross-reference executed test types against the Step 2 discovery matrix
+- If any discovered test type was not executed, flag it as "NOT RUN" in the report with explanation
 
 ### 6. Generate Report
 
