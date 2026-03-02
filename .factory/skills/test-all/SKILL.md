@@ -97,6 +97,29 @@ For Go projects, check for:
 
 Produce a matrix: service x test-type with runner commands.
 
+#### 2b. Discover Project-Specific Test Scripts
+
+Before falling back to standard runner commands, search each service for custom test scripts that the team may have configured. These take priority over generic commands because they often include project-specific flags, environment setup, or multi-step workflows.
+
+Search locations (in priority order):
+
+1. **Makefile / Taskfile.yml / justfile** -- look for targets like `test`, `test-unit`, `test-integration`, `test-e2e`, `test-perf`, `test-all`, `check`, `ci-test`
+2. **Shell scripts** -- `scripts/test*.sh`, `bin/test*`, `run-tests.sh`, `ci/*.sh`
+3. **package.json scripts** (Node.js) -- `test`, `test:unit`, `test:integration`, `test:e2e`, `test:perf`, `test:all`
+4. **pyproject.toml / tox.ini / noxfile.py** (Python) -- `[tool.tox]` envs, nox sessions like `tests`, `integration`, `e2e`
+5. **Docker Compose test services** -- `docker-compose.test.yml`, services named `*-test*`
+6. **CI config files** -- `.github/workflows/test*.yml`, `Jenkinsfile`, `.gitlab-ci.yml` -- extract test commands from CI steps as hints for local execution
+
+For each discovered script, map it to a test type (unit / integration / e2e / performance) based on name or content.
+
+**Command resolution priority** for each test type in a service:
+
+1. Project-specific script (Makefile target, shell script, tox env, etc.)
+2. Named `package.json` script (e.g., `test:e2e`)
+3. Standard runner command from the table in Step 4d
+
+Record the chosen command source in the execution queue (e.g., `Makefile:test-e2e` vs `npx playwright test`).
+
 ### 3. Validate Environment Readiness
 
 For each service, check prerequisites:
@@ -144,10 +167,10 @@ From the Step 2 discovery matrix, build an execution queue listing every service
 
 ```
 EXECUTION QUEUE (N entries):
-[ ] unit       - Jest (services/api), pytest (services/worker)
-[ ] integration - pytest (services/worker)
-[ ] e2e        - Playwright (services/web)
-[ ] performance - k6 (services/api)
+[ ] unit        - services/api (npm test:unit via package.json), services/worker (make test-unit via Makefile)
+[ ] integration - services/worker (python -m pytest tests/integration/ --cov, standard)
+[ ] e2e         - services/web (scripts/run-e2e.sh via shell script)
+[ ] performance - services/api (k6 run ..., standard)
 ```
 
 This queue is a binding contract. Every entry MUST be executed before generating the report.
@@ -212,7 +235,7 @@ CHECKPOINT: 2/4 complete, 2 remaining:
 
 Note: `--no-header` requires pytest >= 7.0. For older versions, remove this flag from the command.
 
-If `package.json` has specific named scripts (e.g., `test:unit`, `test:e2e`), prefer those over generic runner commands as they may include project-specific configuration.
+Use the command resolution priority from Step 2b: project-specific scripts first, then named package.json scripts, then standard runner commands from the table above.
 
 ### 5. Collect and Parse Results
 
