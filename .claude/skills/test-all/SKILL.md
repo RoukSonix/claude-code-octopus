@@ -36,9 +36,11 @@ git diff --name-only <base-branch>...HEAD 2>/dev/null || true
 git diff --name-only
 # Staged changes
 git diff --name-only --cached
+# Untracked files (new files not yet staged)
+git ls-files --others --exclude-standard
 ```
 
-Combine all changed file paths. Map each changed file to its parent service directory. A service directory is identified by the presence of a project manifest at its root:
+Combine all changed file paths (including untracked). Map each changed file to its parent service directory. A service directory is identified by the presence of a project manifest at its root:
 
 - `package.json` (Node.js / frontend)
 - `pyproject.toml` or `setup.py` or `setup.cfg` (Python)
@@ -62,7 +64,7 @@ For each affected service, scan for test runner configurations and classify test
 |---|---|---|
 | `jest.config.*` or `jest` key in package.json | Jest | unit |
 | `vitest.config.*` | Vitest | unit |
-| `pytest.ini` / `pyproject.toml` with `[tool.pytest]` / `conftest.py` | pytest | unit |
+| `pytest.ini` / `pyproject.toml` with `[tool.pytest.ini_options]` / `conftest.py` | pytest | unit |
 | `playwright.config.*` | Playwright | e2e |
 | `cypress.config.*` or `cypress/` directory | Cypress | e2e |
 | `.mocharc.*` or `mocha` key in package.json | Mocha | unit |
@@ -223,7 +225,7 @@ CHECKPOINT: 2/4 complete, 2 remaining:
 |---|---|
 | Jest | `npx jest --ci --coverage --no-color` |
 | Vitest | `npx vitest run --coverage --reporter=verbose` |
-| pytest | `python -m pytest -v --tb=short --no-header --cov` |
+| pytest | `python -m pytest -v --tb=short --no-header` (add `--cov` only if pytest-cov is installed) |
 | Playwright | `npx playwright test --reporter=list` |
 | Cypress | `npx cypress run --reporter spec` |
 | Mocha | `npx mocha --reporter spec --no-color` |
@@ -234,7 +236,7 @@ CHECKPOINT: 2/4 complete, 2 remaining:
 | Locust | `locust --headless -u 1 -r 1 --run-time 30s` |
 | dotnet test | `dotnet test --no-build --verbosity normal` |
 
-Note: `--no-header` requires pytest >= 7.0. For older versions, remove this flag from the command.
+Note: `--no-header` requires pytest >= 7.0. For older versions, remove this flag. To check if pytest-cov is available, run `python -m pytest --co -q --cov 2>&1 | head -1` -- if it errors with "unrecognized arguments", omit `--cov`.
 
 Use the command resolution priority from Step 2b: project-specific scripts first, then named package.json scripts, then standard runner commands from the table above.
 
