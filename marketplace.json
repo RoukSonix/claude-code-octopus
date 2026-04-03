@@ -1,0 +1,1011 @@
+{
+  "$schema": "https://raw.githubusercontent.com/rouksonix/claude-code-octopus/main/marketplace/schema.json",
+  "name": "AI Agents Marketplace",
+  "version": "1.0.0",
+  "description": "Open marketplace of agents, commands, and skills for Claude Code and Codex CLI",
+  "repository": "https://github.com/rouksonix/claude-code-octopus",
+  "license": "MIT",
+  "categories": {
+    "agents": {
+      "planning": {
+        "label": "Planning & Architecture",
+        "icon": "🏗️",
+        "description": "Agents for architecture design, implementation planning, and strategic analysis"
+      },
+      "code-review": {
+        "label": "Code Review",
+        "icon": "🔍",
+        "description": "Specialized reviewers for quality, security, performance, and testing"
+      },
+      "utility": {
+        "label": "Utility",
+        "icon": "🔧",
+        "description": "General-purpose agents for search, memory, linting, and document analysis"
+      }
+    },
+    "commands": {
+      "planning": {
+        "label": "Planning",
+        "icon": "📋",
+        "description": "JIRA analysis and implementation planning workflows"
+      },
+      "code-review": {
+        "label": "Code Review",
+        "icon": "🔍",
+        "description": "PR review and code quality workflows"
+      },
+      "research": {
+        "label": "Research",
+        "icon": "📚",
+        "description": "Documentation lookup and solution research"
+      },
+      "testing": {
+        "label": "Testing",
+        "icon": "🧪",
+        "description": "Browser automation and test execution"
+      },
+      "context-memory": {
+        "label": "Context & Memory",
+        "icon": "🧠",
+        "description": "Knowledge persistence and retrieval"
+      },
+      "devops": {
+        "label": "DevOps & Quality",
+        "icon": "⚙️",
+        "description": "CI/CD, linting, and quality checks"
+      }
+    },
+    "skills": {
+      "automation": {
+        "label": "Automation",
+        "icon": "🤖",
+        "description": "Deterministic scripts and automated workflows"
+      },
+      "migration": {
+        "label": "Migration",
+        "icon": "🔄",
+        "description": "Code and test migration tools"
+      },
+      "testing": {
+        "label": "Testing",
+        "icon": "🧪",
+        "description": "Test discovery and execution"
+      }
+    }
+  },
+  "items": [
+    {
+      "id": "agent-planning-implementation",
+      "type": "agent",
+      "name": "planning-implementation",
+      "displayName": "Implementation Planner",
+      "description": "Expert implementation planning specialist. Analyzes architecture, creates detailed implementation plans with Context7 documentation, estimates time and risks.",
+      "category": "planning",
+      "tags": ["architecture", "planning", "context7", "roadmap"],
+      "tools": ["Read", "Grep", "Glob", "mcp__context7__*", "WebSearch", "LS", "Write"],
+      "mcp_required": ["context7"],
+      "compatibility": {
+        "claude-code": {
+          "path": ".claude/agents/planning-agents/planning-implementation.md",
+          "supported": true
+        },
+        "codex": {
+          "path": null,
+          "supported": false,
+          "note": "Codex CLI does not support sub-agents"
+        }
+      }
+    },
+    {
+      "id": "agent-planning-quality-advisor",
+      "type": "agent",
+      "name": "planning-quality-advisor",
+      "displayName": "Quality Advisor",
+      "description": "Architecture and code quality planning specialist. Analyzes existing patterns and designs high-quality architecture for new features and modifications.",
+      "category": "planning",
+      "tags": ["architecture", "quality", "patterns", "context7"],
+      "tools": ["Read", "Grep", "Glob", "mcp__context7__*", "WebSearch", "LS", "Write"],
+      "mcp_required": ["context7"],
+      "compatibility": {
+        "claude-code": {
+          "path": ".claude/agents/planning-agents/planning-quality-advisor.md",
+          "supported": true
+        },
+        "codex": {
+          "path": null,
+          "supported": false
+        }
+      }
+    },
+    {
+      "id": "agent-planning-security-architect",
+      "type": "agent",
+      "name": "planning-security-architect",
+      "displayName": "Security Architect",
+      "description": "Security architecture planning specialist. Designs secure implementations for new features including auth, encryption, validation, and compliance requirements.",
+      "category": "planning",
+      "tags": ["security", "auth", "encryption", "compliance", "context7"],
+      "tools": ["Read", "Grep", "Glob", "mcp__context7__*", "WebSearch", "LS", "Write"],
+      "mcp_required": ["context7"],
+      "compatibility": {
+        "claude-code": {
+          "path": ".claude/agents/planning-agents/planning-security-architect.md",
+          "supported": true
+        },
+        "codex": {
+          "path": null,
+          "supported": false
+        }
+      }
+    },
+    {
+      "id": "agent-planning-testing-strategist",
+      "type": "agent",
+      "name": "planning-testing-strategist",
+      "displayName": "Testing Strategist",
+      "description": "Test strategy planning specialist for new features. Designs comprehensive testing approaches including unit, integration, e2e tests, and test data management.",
+      "category": "planning",
+      "tags": ["testing", "strategy", "e2e", "unit-tests", "context7"],
+      "tools": ["Read", "Grep", "Glob", "mcp__context7__*", "WebSearch", "LS", "Write"],
+      "mcp_required": ["context7"],
+      "compatibility": {
+        "claude-code": {
+          "path": ".claude/agents/planning-agents/planning-testing-strategist.md",
+          "supported": true
+        },
+        "codex": {
+          "path": null,
+          "supported": false
+        }
+      }
+    },
+    {
+      "id": "agent-planning-bug-prevention",
+      "type": "agent",
+      "name": "planning-bug-prevention",
+      "displayName": "Bug Prevention Planner",
+      "description": "Bug prevention planning specialist. Identifies potential edge cases, error scenarios, and failure modes before implementation to design robust error handling.",
+      "category": "planning",
+      "tags": ["bugs", "edge-cases", "error-handling", "prevention"],
+      "tools": ["Read", "Grep", "Glob", "mcp__context7__*", "WebSearch", "LS", "Write"],
+      "mcp_required": ["context7"],
+      "compatibility": {
+        "claude-code": {
+          "path": ".claude/agents/planning-agents/planning-bug-prevention.md",
+          "supported": true
+        },
+        "codex": {
+          "path": null,
+          "supported": false
+        }
+      }
+    },
+    {
+      "id": "agent-planning-best-practices",
+      "type": "agent",
+      "name": "planning-best-practices",
+      "displayName": "Best Practices Reviewer",
+      "description": "Proactively reviews implemented solutions for best practices, performance issues, and breaking changes using Context7 documentation.",
+      "category": "planning",
+      "tags": ["best-practices", "standards", "deprecated", "context7"],
+      "tools": ["Read", "mcp__context7__resolve-library-id", "mcp__context7__get-library-docs", "Grep", "Glob", "WebSearch", "Write"],
+      "mcp_required": ["context7"],
+      "compatibility": {
+        "claude-code": {
+          "path": ".claude/agents/planning-agents/planning-best-practices.md",
+          "supported": true
+        },
+        "codex": {
+          "path": null,
+          "supported": false
+        }
+      }
+    },
+    {
+      "id": "agent-planning-ci-cd",
+      "type": "agent",
+      "name": "planning-ci-cd",
+      "displayName": "CI/CD Pipeline Specialist",
+      "description": "CI/CD pipeline specialist. Analyzes Jenkins, GitHub Actions, GitLab CI configurations and plans pipeline improvements.",
+      "category": "planning",
+      "tags": ["ci-cd", "jenkins", "github-actions", "gitlab-ci", "devops"],
+      "tools": ["Read", "Grep", "Glob", "WebSearch", "mcp__context7__*", "Bash", "LS", "Write"],
+      "mcp_required": ["context7"],
+      "compatibility": {
+        "claude-code": {
+          "path": ".claude/agents/planning-agents/planning-ci-cd.md",
+          "supported": true
+        },
+        "codex": {
+          "path": null,
+          "supported": false
+        }
+      }
+    },
+    {
+      "id": "agent-planning-performance-architect",
+      "type": "agent",
+      "name": "planning-performance-architect",
+      "displayName": "Performance Architect",
+      "description": "Performance architecture planning specialist. Designs high-performance solutions with optimal algorithms, caching strategies, and scalability patterns.",
+      "category": "planning",
+      "tags": ["performance", "optimization", "caching", "scalability"],
+      "tools": ["Read", "Grep", "Glob", "mcp__context7__*", "WebSearch", "LS", "Write"],
+      "mcp_required": ["context7"],
+      "compatibility": {
+        "claude-code": {
+          "path": ".claude/agents/planning-agents/planning-performance-architect.md",
+          "supported": true
+        },
+        "codex": {
+          "path": null,
+          "supported": false
+        }
+      }
+    },
+    {
+      "id": "agent-planning-documentation",
+      "type": "agent",
+      "name": "planning-documentation",
+      "displayName": "Documentation Planner",
+      "description": "Documentation planning specialist. Analyzes code changes to determine documentation needs, plans README updates, API docs, inline comments, and user guides.",
+      "category": "planning",
+      "tags": ["documentation", "readme", "api-docs", "guides"],
+      "tools": ["Read", "Grep", "Glob", "WebSearch", "mcp__context7__*", "LS", "Write"],
+      "mcp_required": ["context7"],
+      "compatibility": {
+        "claude-code": {
+          "path": ".claude/agents/planning-agents/planning-documentation.md",
+          "supported": true
+        },
+        "codex": {
+          "path": null,
+          "supported": false
+        }
+      }
+    },
+    {
+      "id": "agent-codebase-analyzer",
+      "type": "agent",
+      "name": "codebase-analyzer",
+      "displayName": "Codebase Analyzer",
+      "description": "Deep codebase analysis specialist. Uses filesystem tools to map project structure, find similar implementations, analyze dependencies, and identify integration points.",
+      "category": "planning",
+      "tags": ["analysis", "codebase", "dependencies", "structure"],
+      "tools": ["mcp__filesystem__*", "Read", "Grep", "Glob", "LS", "Bash", "Write"],
+      "mcp_required": ["filesystem"],
+      "compatibility": {
+        "claude-code": {
+          "path": ".claude/agents/planning-agents/codebase-analyzer.md",
+          "supported": true
+        },
+        "codex": {
+          "path": null,
+          "supported": false
+        }
+      }
+    },
+    {
+      "id": "agent-bug-detector",
+      "type": "agent",
+      "name": "bug-detector",
+      "displayName": "Bug Detector",
+      "description": "Identifies potential bugs, edge cases, and logic errors using pattern analysis and Context7.",
+      "category": "code-review",
+      "tags": ["bugs", "edge-cases", "logic-errors", "context7"],
+      "tools": ["Read", "Grep", "Glob", "mcp__context7__resolve-library-id", "mcp__context7__get-library-docs"],
+      "mcp_required": ["context7"],
+      "compatibility": {
+        "claude-code": {
+          "path": ".claude/agents/code-review-agents/bug-detector.md",
+          "supported": true
+        },
+        "codex": {
+          "path": null,
+          "supported": false
+        }
+      }
+    },
+    {
+      "id": "agent-code-quality-reviewer",
+      "type": "agent",
+      "name": "code-quality-reviewer",
+      "displayName": "Code Quality Reviewer",
+      "description": "Analyzes code quality, best practices, and maintainability using Context7 documentation.",
+      "category": "code-review",
+      "tags": ["quality", "best-practices", "maintainability", "solid"],
+      "tools": ["Read", "Grep", "Glob", "mcp__context7__resolve-library-id", "mcp__context7__get-library-docs"],
+      "mcp_required": ["context7"],
+      "compatibility": {
+        "claude-code": {
+          "path": ".claude/agents/code-review-agents/code-quality-reviewer.md",
+          "supported": true
+        },
+        "codex": {
+          "path": null,
+          "supported": false
+        }
+      }
+    },
+    {
+      "id": "agent-performance-reviewer",
+      "type": "agent",
+      "name": "performance-reviewer",
+      "displayName": "Performance Reviewer",
+      "description": "Analyzes performance implications, identifies bottlenecks, and suggests optimizations using Context7.",
+      "category": "code-review",
+      "tags": ["performance", "bottlenecks", "optimization", "context7"],
+      "tools": ["Read", "Grep", "Glob", "mcp__context7__resolve-library-id", "mcp__context7__get-library-docs"],
+      "mcp_required": ["context7"],
+      "compatibility": {
+        "claude-code": {
+          "path": ".claude/agents/code-review-agents/performance-reviewer.md",
+          "supported": true
+        },
+        "codex": {
+          "path": null,
+          "supported": false
+        }
+      }
+    },
+    {
+      "id": "agent-security-reviewer",
+      "type": "agent",
+      "name": "security-reviewer",
+      "displayName": "Security Reviewer",
+      "description": "Identifies security vulnerabilities and suggests secure coding practices using Context7 and security databases.",
+      "category": "code-review",
+      "tags": ["security", "vulnerabilities", "owasp", "context7"],
+      "tools": ["Read", "Grep", "Glob", "mcp__context7__resolve-library-id", "mcp__context7__get-library-docs", "WebSearch"],
+      "mcp_required": ["context7"],
+      "compatibility": {
+        "claude-code": {
+          "path": ".claude/agents/code-review-agents/security-reviewer.md",
+          "supported": true
+        },
+        "codex": {
+          "path": null,
+          "supported": false
+        }
+      }
+    },
+    {
+      "id": "agent-testing-reviewer",
+      "type": "agent",
+      "name": "testing-reviewer",
+      "displayName": "Testing Reviewer",
+      "description": "Assesses test coverage, quality, and suggests testing improvements for code changes.",
+      "category": "code-review",
+      "tags": ["testing", "coverage", "test-quality"],
+      "tools": ["Read", "Grep", "Glob", "LS"],
+      "mcp_required": [],
+      "compatibility": {
+        "claude-code": {
+          "path": ".claude/agents/code-review-agents/testing-reviewer.md",
+          "supported": true
+        },
+        "codex": {
+          "path": null,
+          "supported": false
+        }
+      }
+    },
+    {
+      "id": "agent-confluence-searcher",
+      "type": "agent",
+      "name": "confluence-searcher",
+      "displayName": "Confluence Searcher",
+      "description": "Searches and extracts information from Confluence using MCP Atlassian.",
+      "category": "utility",
+      "tags": ["confluence", "atlassian", "search", "documentation"],
+      "tools": ["mcp__atlassian__*", "mcp__memory__*", "WebSearch"],
+      "mcp_required": ["atlassian", "memory"],
+      "compatibility": {
+        "claude-code": {
+          "path": ".claude/agents/confluence-searcher.md",
+          "supported": true
+        },
+        "codex": {
+          "path": null,
+          "supported": false
+        }
+      }
+    },
+    {
+      "id": "agent-lint-type-checker",
+      "type": "agent",
+      "name": "lint-type-checker",
+      "displayName": "Lint & Type Checker",
+      "description": "Background agent that automatically runs linting and type checking on code changes. Proactively identifies and fixes style issues, type errors, and code quality problems.",
+      "category": "utility",
+      "tags": ["linting", "types", "eslint", "typescript"],
+      "tools": ["Bash", "Read", "Edit", "MultiEdit", "Grep", "Glob", "LS"],
+      "mcp_required": [],
+      "compatibility": {
+        "claude-code": {
+          "path": ".claude/agents/lint-type-checker.md",
+          "supported": true
+        },
+        "codex": {
+          "path": null,
+          "supported": false
+        }
+      }
+    },
+    {
+      "id": "agent-memory-manager",
+      "type": "agent",
+      "name": "memory-manager",
+      "displayName": "Memory Manager",
+      "description": "Manages memory operations, compiles results from multiple agents, and handles context persistence.",
+      "category": "utility",
+      "tags": ["memory", "context", "persistence", "mcp"],
+      "tools": ["mcp__memory__*", "mcp__filesystem__write_file", "mcp__filesystem__read_file"],
+      "mcp_required": ["memory", "filesystem"],
+      "compatibility": {
+        "claude-code": {
+          "path": ".claude/agents/memory-manager.md",
+          "supported": true
+        },
+        "codex": {
+          "path": null,
+          "supported": false
+        }
+      }
+    },
+    {
+      "id": "agent-pdf-analyzer",
+      "type": "agent",
+      "name": "pdf-analyzer",
+      "displayName": "PDF Analyzer",
+      "description": "Analyzes PDF documents and extracts structured information with memory persistence.",
+      "category": "utility",
+      "tags": ["pdf", "documents", "extraction", "memory"],
+      "tools": ["Read", "mcp__filesystem__read_file", "mcp__memory__*"],
+      "mcp_required": ["filesystem", "memory"],
+      "compatibility": {
+        "claude-code": {
+          "path": ".claude/agents/pdf-analyzer.md",
+          "supported": true
+        },
+        "codex": {
+          "path": null,
+          "supported": false
+        }
+      }
+    },
+    {
+      "id": "cmd-agentic-jira-task-analyze",
+      "type": "command",
+      "name": "planning:agentic-jira-task-analyze",
+      "displayName": "Agentic JIRA Analyzer",
+      "description": "Analyze JIRA task and create comprehensive implementation plan using multiple specialized agents.",
+      "category": "planning",
+      "tags": ["jira", "planning", "multi-agent", "atlassian"],
+      "mcp_required": ["atlassian", "context7", "filesystem"],
+      "compatibility": {
+        "claude-code": {
+          "path": ".claude/commands/planning/agentic-jira-task-analyze.md",
+          "invocation": "/planning:agentic-jira-task-analyze",
+          "supported": true
+        },
+        "codex": {
+          "path": null,
+          "supported": false,
+          "note": "Requires Task tool for multi-agent orchestration"
+        }
+      }
+    },
+    {
+      "id": "cmd-jira-task-analyze",
+      "type": "command",
+      "name": "planning:jira-task-analyze",
+      "displayName": "JIRA Task Analyzer",
+      "description": "Analyze JIRA task and create comprehensive implementation plan (single-agent).",
+      "category": "planning",
+      "tags": ["jira", "planning", "atlassian"],
+      "mcp_required": ["atlassian", "context7", "filesystem"],
+      "compatibility": {
+        "claude-code": {
+          "path": ".claude/commands/planning/jira-task-analyze.md",
+          "invocation": "/planning:jira-task-analyze",
+          "supported": true
+        },
+        "codex": {
+          "path": ".codex/prompts/jira-task-analyze.md",
+          "invocation": "/jira-task-analyze",
+          "supported": true
+        }
+      }
+    },
+    {
+      "id": "cmd-agentic-plan-implementation",
+      "type": "command",
+      "name": "planning:agentic-plan-implementation",
+      "displayName": "Agentic Implementation Planner",
+      "description": "Comprehensive implementation planning with Context7 research, architecture analysis, and CI/CD planning.",
+      "category": "planning",
+      "tags": ["planning", "architecture", "context7", "multi-agent"],
+      "mcp_required": ["context7"],
+      "compatibility": {
+        "claude-code": {
+          "path": ".claude/commands/planning/agentic-plan-implementation.md",
+          "invocation": "/planning:agentic-plan-implementation",
+          "supported": true
+        },
+        "codex": {
+          "path": null,
+          "supported": false,
+          "note": "Requires Task tool for multi-agent orchestration"
+        }
+      }
+    },
+    {
+      "id": "cmd-pr-review",
+      "type": "command",
+      "name": "code-review:pr-review",
+      "displayName": "PR Review (Multi-Agent)",
+      "description": "Perform comprehensive code review for pull request using multiple specialized agents (GitHub/Bitbucket).",
+      "category": "code-review",
+      "tags": ["pr", "review", "github", "bitbucket", "multi-agent"],
+      "mcp_required": [],
+      "compatibility": {
+        "claude-code": {
+          "path": ".claude/commands/code-review/pr-review.md",
+          "invocation": "/code-review:pr-review",
+          "supported": true
+        },
+        "codex": {
+          "path": null,
+          "supported": false,
+          "note": "Requires Task tool"
+        }
+      }
+    },
+    {
+      "id": "cmd-agentic-code-review",
+      "type": "command",
+      "name": "code-review:agentic-code-review",
+      "displayName": "Agentic Code Review",
+      "description": "Orchestrates multiple specialized sub-agents to perform comprehensive parallel code review.",
+      "category": "code-review",
+      "tags": ["review", "parallel", "multi-agent", "quality"],
+      "mcp_required": [],
+      "compatibility": {
+        "claude-code": {
+          "path": ".claude/commands/code-review/agentic-code-review.md",
+          "invocation": "/code-review:agentic-code-review",
+          "supported": true
+        },
+        "codex": {
+          "path": null,
+          "supported": false,
+          "note": "Requires Task tool"
+        }
+      }
+    },
+    {
+      "id": "cmd-quality-code-review",
+      "type": "command",
+      "name": "code-review:quality-code-review",
+      "displayName": "Quality Code Review",
+      "description": "Performs comprehensive quality code review focusing on best practices, optimization, and maintainability.",
+      "category": "code-review",
+      "tags": ["review", "quality", "best-practices"],
+      "mcp_required": [],
+      "compatibility": {
+        "claude-code": {
+          "path": ".claude/commands/code-review/quality-code-review.md",
+          "invocation": "/code-review:quality-code-review",
+          "supported": true
+        },
+        "codex": {
+          "path": null,
+          "supported": false
+        }
+      }
+    },
+    {
+      "id": "cmd-commit-review-by-hash-id",
+      "type": "command",
+      "name": "code-review:commit-review-by-hash-id",
+      "displayName": "Commit Review",
+      "description": "Perform code review for specific commit(s) by hash ID.",
+      "category": "code-review",
+      "tags": ["review", "commit", "git"],
+      "mcp_required": ["context7"],
+      "compatibility": {
+        "claude-code": {
+          "path": ".claude/commands/code-review/commit-review-by-hash-id.md",
+          "invocation": "/code-review:commit-review-by-hash-id",
+          "supported": true
+        },
+        "codex": {
+          "path": null,
+          "supported": false
+        }
+      }
+    },
+    {
+      "id": "cmd-non-agentic-precommit-review",
+      "type": "command",
+      "name": "code-review:non-agentic-precommit-review",
+      "displayName": "Precommit Review",
+      "description": "Performs comprehensive code review directly without using sub-agents.",
+      "category": "code-review",
+      "tags": ["review", "precommit", "lightweight"],
+      "mcp_required": [],
+      "compatibility": {
+        "claude-code": {
+          "path": ".claude/commands/code-review/non-agentic-precommit-review.md",
+          "invocation": "/code-review:non-agentic-precommit-review",
+          "supported": true
+        },
+        "codex": {
+          "path": ".codex/prompts/non-agentic-precommit-review.md",
+          "invocation": "/non-agentic-precommit-review",
+          "supported": true
+        }
+      }
+    },
+    {
+      "id": "cmd-use-context7",
+      "type": "command",
+      "name": "research:use-context7",
+      "displayName": "Context7 Research",
+      "description": "Use Context7 to research best practices and solutions for any technology.",
+      "category": "research",
+      "tags": ["context7", "research", "documentation", "best-practices"],
+      "mcp_required": ["context7"],
+      "compatibility": {
+        "claude-code": {
+          "path": ".claude/commands/research/use-context7.md",
+          "invocation": "/research:use-context7",
+          "supported": true
+        },
+        "codex": {
+          "path": null,
+          "supported": false,
+          "note": "Requires MCP context7"
+        }
+      }
+    },
+    {
+      "id": "cmd-find-solution",
+      "type": "command",
+      "name": "research:find-solution",
+      "displayName": "Find Solution",
+      "description": "Research and analyze documentation to find optimal solutions for a given problem.",
+      "category": "research",
+      "tags": ["research", "documentation", "solutions", "context7"],
+      "mcp_required": ["context7"],
+      "compatibility": {
+        "claude-code": {
+          "path": ".claude/commands/research/find-solution.md",
+          "invocation": "/research:find-solution",
+          "supported": true
+        },
+        "codex": {
+          "path": null,
+          "supported": false
+        }
+      }
+    },
+    {
+      "id": "cmd-test-app-playwright",
+      "type": "command",
+      "name": "testing:test-app-playwright",
+      "displayName": "Playwright Testing",
+      "description": "Execute application testing using MCP Playwright for browser automation.",
+      "category": "testing",
+      "tags": ["playwright", "testing", "browser", "e2e"],
+      "mcp_required": ["playwright"],
+      "compatibility": {
+        "claude-code": {
+          "path": ".claude/commands/testing/test-app-playwright.md",
+          "invocation": "/testing:test-app-playwright",
+          "supported": true
+        },
+        "codex": {
+          "path": null,
+          "supported": false
+        }
+      }
+    },
+    {
+      "id": "cmd-use-playwright-mcp",
+      "type": "command",
+      "name": "testing:use-playwright-mcp",
+      "displayName": "Playwright MCP Research",
+      "description": "Use MCP Playwright to research best practices and solutions.",
+      "category": "testing",
+      "tags": ["playwright", "mcp", "research"],
+      "mcp_required": ["playwright"],
+      "compatibility": {
+        "claude-code": {
+          "path": ".claude/commands/testing/use-playwright-mcp.md",
+          "invocation": "/testing:use-playwright-mcp",
+          "supported": true
+        },
+        "codex": {
+          "path": null,
+          "supported": false
+        }
+      }
+    },
+    {
+      "id": "cmd-use-chrome-devtools-mcp",
+      "type": "command",
+      "name": "testing:use-chrome-devtools-mcp",
+      "displayName": "Chrome DevTools MCP",
+      "description": "Use MCP Chrome DevTools to research best practices and solutions.",
+      "category": "testing",
+      "tags": ["chrome", "devtools", "mcp", "debugging"],
+      "mcp_required": ["chrome-devtools"],
+      "compatibility": {
+        "claude-code": {
+          "path": ".claude/commands/testing/use-chrome-devtools-mcp.md",
+          "invocation": "/testing:use-chrome-devtools-mcp",
+          "supported": true
+        },
+        "codex": {
+          "path": ".codex/prompts/use-chrome-devtools-mcp.md",
+          "invocation": "/use-chrome-devtools-mcp",
+          "supported": true
+        }
+      }
+    },
+    {
+      "id": "cmd-add-memory",
+      "type": "command",
+      "name": "context-memory:add-memory",
+      "displayName": "Add Memory",
+      "description": "Use MCP memory to store and retrieve information with validation.",
+      "category": "context-memory",
+      "tags": ["memory", "context", "persistence", "mcp"],
+      "mcp_required": ["memory"],
+      "compatibility": {
+        "claude-code": {
+          "path": ".claude/commands/context-memory/add-memory.md",
+          "invocation": "/context-memory:add-memory",
+          "supported": true
+        },
+        "codex": {
+          "path": null,
+          "supported": false
+        }
+      }
+    },
+    {
+      "id": "cmd-read-memory",
+      "type": "command",
+      "name": "context-memory:read-memory",
+      "displayName": "Read Memory",
+      "description": "Read and retrieve information from MCP memory with optional filtering.",
+      "category": "context-memory",
+      "tags": ["memory", "context", "retrieval", "mcp"],
+      "mcp_required": ["memory"],
+      "compatibility": {
+        "claude-code": {
+          "path": ".claude/commands/context-memory/read-memory.md",
+          "invocation": "/context-memory:read-memory",
+          "supported": true
+        },
+        "codex": {
+          "path": null,
+          "supported": false
+        }
+      }
+    },
+    {
+      "id": "cmd-analyze-docs",
+      "type": "command",
+      "name": "analyze-docs",
+      "displayName": "Document Analyzer",
+      "description": "Orchestrates document analysis using specialized agents for PDFs and Confluence with memory persistence.",
+      "category": "research",
+      "tags": ["pdf", "confluence", "documents", "analysis"],
+      "mcp_required": ["filesystem", "atlassian", "memory"],
+      "compatibility": {
+        "claude-code": {
+          "path": ".claude/commands/analyze-docs.md",
+          "invocation": "/analyze-docs",
+          "supported": true
+        },
+        "codex": {
+          "path": null,
+          "supported": false,
+          "note": "Requires Task tool"
+        }
+      }
+    },
+    {
+      "id": "cmd-create-commit",
+      "type": "command",
+      "name": "create-commit",
+      "displayName": "Create Commit",
+      "description": "Create a git commit with all staged changes.",
+      "category": "devops",
+      "tags": ["git", "commit", "workflow"],
+      "mcp_required": [],
+      "compatibility": {
+        "claude-code": {
+          "path": ".claude/commands/create-commit.md",
+          "invocation": "/create-commit",
+          "supported": true
+        },
+        "codex": {
+          "path": ".codex/prompts/create-commit.md",
+          "invocation": "/create-commit",
+          "supported": true
+        }
+      }
+    },
+    {
+      "id": "cmd-quality-check-python",
+      "type": "command",
+      "name": "quality-check-python",
+      "displayName": "Python Quality Check",
+      "description": "Run code quality checks on modified Python files.",
+      "category": "devops",
+      "tags": ["python", "quality", "linting", "formatting"],
+      "mcp_required": [],
+      "compatibility": {
+        "claude-code": {
+          "path": ".claude/commands/quality-check-python.md",
+          "invocation": "/quality-check-python",
+          "supported": true
+        },
+        "codex": {
+          "path": ".codex/prompts/quality-check-python.md",
+          "invocation": "/quality-check-python",
+          "supported": true
+        }
+      }
+    },
+    {
+      "id": "cmd-quality-check-frontend",
+      "type": "command",
+      "name": "quality-check-frontend",
+      "displayName": "Frontend Quality Check",
+      "description": "Run code quality checks on all frontend files.",
+      "category": "devops",
+      "tags": ["frontend", "quality", "eslint", "prettier"],
+      "mcp_required": [],
+      "compatibility": {
+        "claude-code": {
+          "path": ".claude/commands/quality-check-frontend.md",
+          "invocation": "/quality-check-frontend",
+          "supported": true
+        },
+        "codex": {
+          "path": ".codex/prompts/quality-check-frontend.md",
+          "invocation": "/quality-check-frontend",
+          "supported": true
+        }
+      }
+    },
+    {
+      "id": "cmd-translate-jira-issue-english",
+      "type": "command",
+      "name": "translate-jira-issue-english",
+      "displayName": "JIRA Issue Translator",
+      "description": "Translate JIRA issue content to English.",
+      "category": "planning",
+      "tags": ["jira", "translation", "i18n"],
+      "mcp_required": ["atlassian"],
+      "compatibility": {
+        "claude-code": {
+          "path": ".claude/commands/translate-jira-issue-english.md",
+          "invocation": "/translate-jira-issue-english",
+          "supported": true
+        },
+        "codex": {
+          "path": ".codex/prompts/translate-jira-issue-english.md",
+          "invocation": "/translate-jira-issue-english",
+          "supported": true
+        }
+      }
+    },
+    {
+      "id": "skill-worktree",
+      "type": "skill",
+      "name": "worktree",
+      "displayName": "Git Worktree Manager",
+      "description": "Create git worktree with automatic sync of gitignored files (configs, .env, IDE settings).",
+      "category": "automation",
+      "tags": ["git", "worktree", "branches", "parallel-dev"],
+      "scriptBased": true,
+      "mcp_required": [],
+      "compatibility": {
+        "claude-code": {
+          "path": ".claude/skills/worktree/",
+          "invocation": "/worktree",
+          "supported": true
+        },
+        "codex": {
+          "path": ".codex/skills/worktree/",
+          "invocation": "/worktree",
+          "supported": true
+        }
+      }
+    },
+    {
+      "id": "skill-jira-parallel-execution-planner",
+      "type": "skill",
+      "name": "jira-parallel-execution-planner",
+      "displayName": "JIRA Parallel Execution Planner",
+      "description": "Analyze a Jira task from a link or issue key, collect all linked tasks, validate execution sequence and parallelization constraints, assess repository readiness, and produce both an implementation plan and a parallel subagent execution plan.",
+      "category": "automation",
+      "tags": ["jira", "planning", "parallel", "delivery"],
+      "scriptBased": false,
+      "mcp_required": ["atlassian"],
+      "compatibility": {
+        "claude-code": {
+          "path": ".claude/skills/jira-parallel-execution-planner/",
+          "invocation": "/jira-parallel-execution-planner",
+          "supported": true
+        },
+        "codex": {
+          "path": ".codex/skills/jira-parallel-execution-planner/",
+          "invocation": "/jira-parallel-execution-planner",
+          "supported": true
+        }
+      }
+    },
+    {
+      "id": "skill-protractor-playwright-migrator",
+      "type": "skill",
+      "name": "protractor-playwright-migrator",
+      "displayName": "Protractor to Playwright Migrator",
+      "description": "Migrate Creatio end-to-end tests from legacy Protractor sources into Playwright TestKit-compliant feature folders.",
+      "category": "migration",
+      "tags": ["protractor", "playwright", "migration", "e2e", "testing"],
+      "scriptBased": false,
+      "mcp_required": ["chrome-devtools"],
+      "compatibility": {
+        "claude-code": {
+          "path": ".claude/skills/protractor-playwright-migrator/",
+          "invocation": "/protractor-playwright-migrator",
+          "supported": true
+        },
+        "codex": {
+          "path": ".codex/skills/protractor-playwright-migrator/",
+          "invocation": "/protractor-playwright-migrator",
+          "supported": true
+        }
+      }
+    },
+    {
+      "id": "skill-test-all",
+      "type": "skill",
+      "name": "test-all",
+      "displayName": "Test All",
+      "description": "Detect modified services in a monorepo, discover all test types (unit, integration, component, e2e, performance), validate environment readiness, run tests, and produce a structured report.",
+      "category": "testing",
+      "tags": ["testing", "monorepo", "ci", "report"],
+      "scriptBased": false,
+      "mcp_required": [],
+      "compatibility": {
+        "claude-code": {
+          "path": ".claude/skills/test-all/",
+          "invocation": "/test-all",
+          "supported": true
+        },
+        "codex": {
+          "path": ".codex/skills/test-all/",
+          "invocation": "/test-all",
+          "supported": true
+        }
+      }
+    }
+  ],
+  "stats": {
+    "total": 43,
+    "agents": 19,
+    "commands": 20,
+    "skills": 4,
+    "claude_code_supported": 43,
+    "codex_supported": 12
+  }
+}

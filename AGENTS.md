@@ -1,13 +1,15 @@
-# Repository Purpose
+# AI Agents Marketplace
 
-**Code Agent Octopus** is a multi-CLI toolkit that provides reusable agents, commands, and workflows for AI coding assistants. This repository serves as a centralized template library supporting:
+Open marketplace of production-ready agents, commands, and skills for AI coding assistants. **43 items** available for:
 
-- **Claude Code** - Anthropic's CLI with sub-agents and slash commands (`.claude/`)
-- **Codex CLI** - OpenAI's CLI with AGENTS.md configuration (`.codex/`)
+- **Claude Code** - Anthropic's CLI with sub-agents and slash commands (`.claude/`) — 43 items
+- **Codex CLI** - OpenAI's CLI with AGENTS.md configuration (`.codex/`) — 12 items
 - **Factory CLI** - Factory.ai's CLI with specialized Droids (`.factory/`)
 - **OpenCode CLI** - Multi-CLI toolkit with agents and commands (`.opencode/`)
 - **GitHub Copilot CLI** - GitHub's CLI that reads multiple instruction formats (`.github/`)
 
+**Registry**: See `marketplace.json` for machine-readable catalog with metadata, tags, and compatibility info.  
+**Installer**: Run `./marketplace/install.sh --list` to browse, `--all` to install everything.  
 **Key principle**: `.factory/` contains canonical templates that are synced to CLI-specific directories.
 
 ## Multi-CLI Architecture
