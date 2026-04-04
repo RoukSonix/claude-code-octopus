@@ -23,6 +23,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import atexit
 import json
 import os
 import platform
@@ -34,6 +35,24 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 __version__ = "1.0.0"
+
+# Track temp dirs for cleanup
+_temp_dirs: List[str] = []
+
+
+def _make_temp_dir() -> Path:
+    """Create a temp dir and register it for cleanup on exit."""
+    d = tempfile.mkdtemp(prefix="marketplace-")
+    _temp_dirs.append(d)
+    return Path(d)
+
+
+def _cleanup_temp_dirs():
+    for d in _temp_dirs:
+        shutil.rmtree(d, ignore_errors=True)
+
+
+atexit.register(_cleanup_temp_dirs)
 
 REPO_URL = "https://github.com/rouksonix/claude-code-octopus.git"
 REPO_ARCHIVE_URL = "https://github.com/rouksonix/claude-code-octopus/archive/refs/heads/main.tar.gz"
@@ -131,13 +150,20 @@ def _download(url: str, dest: Path):
 
 # ── Marketplace Data ────────────────────────────────────────────────────────
 
+def _script_dir() -> Path:
+    """Get the directory containing this script, or cwd if running via pipe."""
+    try:
+        return Path(__file__).resolve().parent
+    except NameError:
+        return Path.cwd()
+
+
 def find_marketplace_json() -> Path:
     """Find marketplace.json locally or download it."""
-    # Check local paths relative to script, parent, and cwd
-    script_dir = Path(__file__).resolve().parent if "__file__" in dir() else Path.cwd()
+    sd = _script_dir()
     candidates = [
-        script_dir / "marketplace.json",
-        script_dir.parent / "marketplace.json",
+        sd / "marketplace.json",
+        sd.parent / "marketplace.json",
         Path.cwd() / "marketplace.json",
     ]
     for p in candidates:
@@ -145,7 +171,7 @@ def find_marketplace_json() -> Path:
             return p
 
     info("Downloading marketplace registry...")
-    tmp = Path(tempfile.mkdtemp()) / "marketplace.json"
+    tmp = _make_temp_dir() / "marketplace.json"
     _download(MARKETPLACE_JSON_URL, tmp)
     return tmp
 
@@ -159,8 +185,8 @@ def load_marketplace(path: Path) -> dict:
 
 def find_repo_root() -> Path:
     """Find repo root locally or download it."""
-    script_dir = Path(__file__).resolve().parent if "__file__" in dir() else Path.cwd()
-    candidates = [script_dir.parent, script_dir, Path.cwd()]
+    sd = _script_dir()
+    candidates = [sd.parent, sd, Path.cwd()]
     for p in candidates:
         if (p / ".claude").is_dir() and (p / "marketplace.json").is_file():
             return p
@@ -171,7 +197,7 @@ def find_repo_root() -> Path:
 
 def _clone_or_download() -> Path:
     """Clone via git, or download archive as fallback."""
-    tmp_base = Path(tempfile.mkdtemp())
+    tmp_base = _make_temp_dir()
 
     # Try git clone
     try:
@@ -191,12 +217,35 @@ def _clone_or_download() -> Path:
         return _download_tarball(tmp_base)
 
 
+def _safe_extract_tar(tar, dest: Path):
+    """Extract tarball with path traversal protection (works on Python 3.7+)."""
+    import tarfile
+    # Python 3.12+ supports filter="data"; older versions need manual check
+    if sys.version_info >= (3, 12):
+        tar.extractall(dest, filter="data")
+    else:
+        for member in tar.getmembers():
+            member_path = (dest / member.name).resolve()
+            if not str(member_path).startswith(str(dest.resolve())):
+                raise tarfile.TarError(f"Path traversal detected: {member.name}")
+        tar.extractall(dest)
+
+
+def _safe_extract_zip(zf, dest: Path):
+    """Extract zip with path traversal protection (Zip Slip prevention)."""
+    for info in zf.infolist():
+        target = (dest / info.filename).resolve()
+        if not str(target).startswith(str(dest.resolve())):
+            raise ValueError(f"Path traversal detected in zip: {info.filename}")
+    zf.extractall(dest)
+
+
 def _download_tarball(tmp_base: Path) -> Path:
     import tarfile
     archive = tmp_base / "repo.tar.gz"
     _download(REPO_ARCHIVE_URL, archive)
     with tarfile.open(archive, "r:gz") as tar:
-        tar.extractall(tmp_base, filter="data")
+        _safe_extract_tar(tar, tmp_base)
     return _find_extracted_dir(tmp_base)
 
 
@@ -205,7 +254,7 @@ def _download_zip(tmp_base: Path) -> Path:
     archive = tmp_base / "repo.zip"
     _download(REPO_ZIP_URL, archive)
     with zipfile.ZipFile(archive, "r") as zf:
-        zf.extractall(tmp_base)
+        _safe_extract_zip(zf, tmp_base)
     return _find_extracted_dir(tmp_base)
 
 
@@ -359,22 +408,40 @@ def _print_stats(data: dict):
 
 # ── Install ─────────────────────────────────────────────────────────────────
 
+def _validate_path(path: str) -> bool:
+    """Reject marketplace.json paths with traversal or absolute components."""
+    if os.path.isabs(path):
+        return False
+    normalized = os.path.normpath(path)
+    if normalized.startswith("..") or "/.." in normalized or "\\.." in normalized:
+        return False
+    return True
+
+
 def _copy_item(repo_root: Path, src: str, dst: Path, name: str, dry_run: bool) -> bool:
+    if not _validate_path(src):
+        err(f"Invalid path in marketplace.json (path traversal rejected): {src}")
+        return False
+
     src_path = repo_root / src
 
     if dry_run:
-        dim(f"[DRY RUN] Would install: {name} -> {dst}")
+        exists = " (overwrite)" if dst.exists() else ""
+        dim(f"[DRY RUN] Would install: {name} -> {dst}{exists}")
         return True
 
     dst.parent.mkdir(parents=True, exist_ok=True)
 
     if src_path.is_dir():
         if dst.exists():
+            warn(f"Overwriting existing: {dst}")
             shutil.rmtree(dst)
         shutil.copytree(src_path, dst)
         ok(f"{name} -> {dst}")
         return True
     elif src_path.is_file():
+        if dst.exists():
+            warn(f"Overwriting existing: {dst}")
         shutil.copy2(src_path, dst)
         ok(f"{name} -> {dst}")
         return True

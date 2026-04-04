@@ -76,19 +76,19 @@ python3 marketplace/install.py --all --target-dir ~/my-project
 
 ```bash
 # Browse and search
-python3 install.py --list
-python3 install.py --search security
-python3 install.py --info agent-bug-detector
-python3 install.py --list-categories
+python3 marketplace/install.py --list
+python3 marketplace/install.py --search security
+python3 marketplace/install.py --info agent-bug-detector
+python3 marketplace/install.py --list-categories
 
 # Install selectively
-python3 install.py --agents --cli claude --target-dir ~/my-project
-python3 install.py --skills --cli codex
-python3 install.py --item skill-worktree
-python3 install.py --category code-review
+python3 marketplace/install.py --agents --cli claude --target-dir ~/my-project
+python3 marketplace/install.py --skills --cli codex
+python3 marketplace/install.py --item skill-worktree
+python3 marketplace/install.py --category code-review
 
 # Preview first
-python3 install.py --all --dry-run
+python3 marketplace/install.py --all --dry-run
 ```
 
 ## Browse the Catalog

@@ -9,7 +9,7 @@ Open marketplace of production-ready agents, commands, and skills for AI coding 
 - **GitHub Copilot CLI** - GitHub's CLI that reads multiple instruction formats (`.github/`)
 
 **Registry**: See `marketplace.json` for machine-readable catalog with metadata, tags, and compatibility info.  
-**Installer**: Run `./marketplace/install.sh --list` to browse, `--all` to install everything.  
+**Installer**: Run `python3 marketplace/install.py --list` to browse, `--all` to install everything.  
 **Key principle**: `.factory/` contains canonical templates that are synced to CLI-specific directories.
 
 ## Multi-CLI Architecture
