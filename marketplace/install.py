@@ -1,64 +1,140 @@
 #!/usr/bin/env python3
 """
-AI Agents Marketplace - Cross-Platform Installer
+AI Agents Marketplace - Universal Installer
 
-Works on macOS, Linux, and Windows. Requires only Python 3.7+ (no external dependencies).
+Single cross-platform installer for macOS, Linux, and Windows.
+Requires only Python 3.7+ with no external dependencies.
 
 Usage:
-    # Remote install (one-liner)
+    # Remote install (macOS / Linux)
     python3 <(curl -fsSL https://raw.githubusercontent.com/rouksonix/claude-code-octopus/main/marketplace/install.py) --all
+
+    # Remote install (Windows PowerShell)
+    Invoke-WebRequest https://raw.githubusercontent.com/rouksonix/claude-code-octopus/main/marketplace/install.py -OutFile install.py; python install.py --all
 
     # Local install
     python3 marketplace/install.py --all --cli claude --target-dir ~/my-project
 
-    # List / search
+    # Browse / search
     python3 marketplace/install.py --list
     python3 marketplace/install.py --search security
 """
 
+from __future__ import annotations
+
 import argparse
 import json
 import os
+import platform
 import shutil
+import subprocess
 import sys
 import tempfile
 from pathlib import Path
+from typing import Dict, List, Optional, Tuple
 
 __version__ = "1.0.0"
 
 REPO_URL = "https://github.com/rouksonix/claude-code-octopus.git"
 REPO_ARCHIVE_URL = "https://github.com/rouksonix/claude-code-octopus/archive/refs/heads/main.tar.gz"
+REPO_ZIP_URL = "https://github.com/rouksonix/claude-code-octopus/archive/refs/heads/main.zip"
+MARKETPLACE_JSON_URL = "https://raw.githubusercontent.com/rouksonix/claude-code-octopus/main/marketplace.json"
 
 
-# ── Colors ──────────────────────────────────────────────────────────────────
+# ── Terminal Colors (cross-platform) ────────────────────────────────────────
 
-class Colors:
-    if sys.stdout.isatty() and os.name != "nt":
+def _init_colors():
+    """Enable colors on all platforms including Windows 10+."""
+    if os.name == "nt":
+        # Enable ANSI escape codes on Windows 10+
+        try:
+            import ctypes
+            kernel32 = ctypes.windll.kernel32
+            # ENABLE_VIRTUAL_TERMINAL_PROCESSING = 0x0004
+            handle = kernel32.GetStdHandle(-11)  # STD_OUTPUT_HANDLE
+            mode = ctypes.c_ulong()
+            kernel32.GetConsoleMode(handle, ctypes.byref(mode))
+            kernel32.SetConsoleMode(handle, mode.value | 0x0004)
+        except Exception:
+            return False
+    return sys.stdout.isatty()
+
+
+_COLORS_ENABLED = _init_colors()
+
+
+class C:
+    """Terminal color codes."""
+    if _COLORS_ENABLED:
         RED = "\033[0;31m"
         GREEN = "\033[0;32m"
         YELLOW = "\033[1;33m"
         BLUE = "\033[0;34m"
         CYAN = "\033[0;36m"
+        MAGENTA = "\033[0;35m"
         BOLD = "\033[1m"
+        DIM = "\033[2m"
         NC = "\033[0m"
     else:
-        RED = GREEN = YELLOW = BLUE = CYAN = BOLD = NC = ""
+        RED = GREEN = YELLOW = BLUE = CYAN = MAGENTA = BOLD = DIM = NC = ""
 
 
-def ok(msg):    print(f"{Colors.GREEN}[OK]{Colors.NC} {msg}")
-def warn(msg):  print(f"{Colors.YELLOW}[!]{Colors.NC} {msg}")
-def err(msg):   print(f"{Colors.RED}[ERROR]{Colors.NC} {msg}", file=sys.stderr)
-def info(msg):  print(f"{Colors.BLUE}[i]{Colors.NC} {msg}")
+def ok(msg: str):
+    print(f"  {C.GREEN}+{C.NC} {msg}")
+
+
+def warn(msg: str):
+    print(f"  {C.YELLOW}!{C.NC} {msg}")
+
+
+def err(msg: str):
+    print(f"  {C.RED}x{C.NC} {msg}", file=sys.stderr)
+
+
+def info(msg: str):
+    print(f"  {C.BLUE}>{C.NC} {msg}")
+
+
+def dim(msg: str):
+    print(f"  {C.DIM}{msg}{C.NC}")
+
 
 def header():
-    print(f"\n{Colors.BOLD}{Colors.CYAN}=== AI Agents Marketplace ==={Colors.NC}\n")
+    os_name = platform.system()
+    print()
+    print(f"  {C.BOLD}{C.CYAN}AI Agents Marketplace{C.NC} {C.DIM}v{__version__}{C.NC}")
+    print(f"  {C.DIM}Platform: {os_name} | Python {platform.python_version()}{C.NC}")
+    print(f"  {C.DIM}{'─' * 50}{C.NC}")
+    print()
+
+
+def section(title: str, count: Optional[int] = None):
+    suffix = f" ({count})" if count is not None else ""
+    print(f"  {C.BOLD}{C.CYAN}{title}{suffix}{C.NC}")
+    print(f"  {C.DIM}{'─' * 50}{C.NC}")
+
+
+# ── Network helpers ─────────────────────────────────────────────────────────
+
+def _download(url: str, dest: Path):
+    """Download a URL to a local file. Uses urllib (stdlib)."""
+    import urllib.request
+    import urllib.error
+
+    try:
+        urllib.request.urlretrieve(url, str(dest))
+    except urllib.error.URLError as e:
+        err(f"Download failed: {url}")
+        err(f"  {e}")
+        sys.exit(1)
 
 
 # ── Marketplace Data ────────────────────────────────────────────────────────
 
-def find_marketplace_json(script_dir: Path) -> Path:
-    """Find marketplace.json - locally or download it."""
-    # Check local paths
+def find_marketplace_json() -> Path:
+    """Find marketplace.json locally or download it."""
+    # Check local paths relative to script, parent, and cwd
+    script_dir = Path(__file__).resolve().parent if "__file__" in dir() else Path.cwd()
     candidates = [
         script_dir / "marketplace.json",
         script_dir.parent / "marketplace.json",
@@ -68,22 +144,10 @@ def find_marketplace_json(script_dir: Path) -> Path:
         if p.is_file():
             return p
 
-    # Download from GitHub
-    info("marketplace.json not found locally, downloading from GitHub...")
-    return download_marketplace_json()
-
-
-def download_marketplace_json() -> Path:
-    """Download marketplace.json to a temp file."""
-    import urllib.request
-    url = "https://raw.githubusercontent.com/rouksonix/claude-code-octopus/main/marketplace.json"
+    info("Downloading marketplace registry...")
     tmp = Path(tempfile.mkdtemp()) / "marketplace.json"
-    try:
-        urllib.request.urlretrieve(url, tmp)
-        return tmp
-    except Exception as e:
-        err(f"Failed to download marketplace.json: {e}")
-        sys.exit(1)
+    _download(MARKETPLACE_JSON_URL, tmp)
+    return tmp
 
 
 def load_marketplace(path: Path) -> dict:
@@ -93,141 +157,213 @@ def load_marketplace(path: Path) -> dict:
 
 # ── Repo Source ─────────────────────────────────────────────────────────────
 
-def find_repo_root(script_dir: Path) -> Path:
-    """Find repo root locally, or clone/download it."""
-    # Check if we're inside the repo
+def find_repo_root() -> Path:
+    """Find repo root locally or download it."""
+    script_dir = Path(__file__).resolve().parent if "__file__" in dir() else Path.cwd()
     candidates = [script_dir.parent, script_dir, Path.cwd()]
     for p in candidates:
         if (p / ".claude").is_dir() and (p / "marketplace.json").is_file():
             return p
 
-    # Need to download
-    info("Marketplace repo not found locally. Cloning from GitHub...")
-    return clone_repo()
+    info("Downloading marketplace repository...")
+    return _clone_or_download()
 
 
-def clone_repo() -> Path:
-    """Clone the repo to a temp directory."""
-    import subprocess
-    tmp_dir = Path(tempfile.mkdtemp()) / "claude-code-octopus"
+def _clone_or_download() -> Path:
+    """Clone via git, or download archive as fallback."""
+    tmp_base = Path(tempfile.mkdtemp())
 
-    # Try git clone first
+    # Try git clone
     try:
         subprocess.run(
-            ["git", "clone", "--depth=1", REPO_URL, str(tmp_dir)],
+            ["git", "clone", "--depth=1", REPO_URL, str(tmp_base / "repo")],
             check=True, capture_output=True, text=True,
         )
-        return tmp_dir
+        ok("Cloned repository")
+        return tmp_base / "repo"
     except (subprocess.CalledProcessError, FileNotFoundError):
         pass
 
-    # Fallback: download tarball
-    info("git not available, downloading archive...")
-    return download_archive()
+    # Fallback: download archive
+    if platform.system() == "Windows":
+        return _download_zip(tmp_base)
+    else:
+        return _download_tarball(tmp_base)
 
 
-def download_archive() -> Path:
-    """Download and extract the repo archive."""
+def _download_tarball(tmp_base: Path) -> Path:
     import tarfile
-    import urllib.request
+    archive = tmp_base / "repo.tar.gz"
+    _download(REPO_ARCHIVE_URL, archive)
+    with tarfile.open(archive, "r:gz") as tar:
+        tar.extractall(tmp_base, filter="data")
+    return _find_extracted_dir(tmp_base)
 
-    tmp_dir = Path(tempfile.mkdtemp())
-    archive_path = tmp_dir / "repo.tar.gz"
 
-    try:
-        urllib.request.urlretrieve(REPO_ARCHIVE_URL, archive_path)
-    except Exception as e:
-        err(f"Failed to download archive: {e}")
-        sys.exit(1)
+def _download_zip(tmp_base: Path) -> Path:
+    import zipfile
+    archive = tmp_base / "repo.zip"
+    _download(REPO_ZIP_URL, archive)
+    with zipfile.ZipFile(archive, "r") as zf:
+        zf.extractall(tmp_base)
+    return _find_extracted_dir(tmp_base)
 
-    with tarfile.open(archive_path, "r:gz") as tar:
-        tar.extractall(tmp_dir)
 
-    # Find extracted directory
-    for child in tmp_dir.iterdir():
+def _find_extracted_dir(tmp_base: Path) -> Path:
+    for child in tmp_base.iterdir():
         if child.is_dir() and child.name.startswith("claude-code-octopus"):
+            ok("Downloaded repository archive")
             return child
-
-    err("Failed to find repo in archive")
+    err("Failed to find repo in downloaded archive")
     sys.exit(1)
 
 
-# ── List / Search ───────────────────────────────────────────────────────────
+# ── List / Search / Info ────────────────────────────────────────────────────
 
-def list_items(data: dict):
+def _cli_badge(item: dict) -> str:
+    """Return a compact CLI support badge."""
+    parts = []
+    if item.get("compatibility", {}).get("claude-code", {}).get("supported"):
+        parts.append(f"{C.GREEN}Claude{C.NC}")
+    if item.get("compatibility", {}).get("codex", {}).get("supported"):
+        parts.append(f"{C.BLUE}Codex{C.NC}")
+    return " ".join(parts) if parts else f"{C.DIM}none{C.NC}"
+
+
+def cmd_list(data: dict):
     header()
-    print(f"{Colors.BOLD}Available Items:{Colors.NC}\n")
-
     for item_type, label in [("agent", "Agents"), ("command", "Commands"), ("skill", "Skills")]:
         items = [i for i in data["items"] if i["type"] == item_type]
-        count = len(items)
-        print(f"{Colors.BOLD}{Colors.CYAN}{label} ({count}){Colors.NC}")
-        print(f"{Colors.BOLD}{'─' * 60}{Colors.NC}")
+        section(label, len(items))
         for item in items:
-            cli_support = []
-            for cli_key, cli_name in [("claude-code", "CC"), ("codex", "Codex")]:
-                if item.get("compatibility", {}).get(cli_key, {}).get("supported"):
-                    cli_support.append(cli_name)
-            support_str = ", ".join(cli_support)
-            print(f"  {item['id']:<45} [{support_str}]")
-            print(f"    {item['description']}")
-        print()
-
-    stats = data.get("stats", {})
-    print(f"{Colors.BOLD}Total: {stats.get('total', '?')} items{Colors.NC}")
-    print(f"  Claude Code: {stats.get('claude_code_supported', '?')} supported")
-    print(f"  Codex CLI:   {stats.get('codex_supported', '?')} supported")
+            badge = _cli_badge(item)
+            print(f"    {C.BOLD}{item['id']}{C.NC}")
+            print(f"    {C.DIM}{item['description']}{C.NC}")
+            print(f"    CLI: {badge}")
+            if item.get("mcp_required"):
+                mcps = ", ".join(item["mcp_required"])
+                print(f"    MCP: {C.MAGENTA}{mcps}{C.NC}")
+            print()
+    _print_stats(data)
 
 
-def search_items(data: dict, query: str):
+def cmd_search(data: dict, query: str):
     header()
-    print(f"Search results for: {Colors.BOLD}{query}{Colors.NC}\n")
+    print(f"  Search: {C.BOLD}{query}{C.NC}\n")
 
     q = query.lower()
-    found = 0
+    results = []
     for item in data["items"]:
-        name_match = q in item.get("name", "").lower()
-        desc_match = q in item.get("description", "").lower()
-        tag_match = any(q in t.lower() for t in item.get("tags", []))
+        score = 0
+        if q in item.get("name", "").lower():
+            score += 3
+        if q in item.get("displayName", "").lower():
+            score += 2
+        if any(q == t.lower() for t in item.get("tags", [])):
+            score += 2
+        if any(q in t.lower() for t in item.get("tags", [])):
+            score += 1
+        if q in item.get("description", "").lower():
+            score += 1
+        if score > 0:
+            results.append((score, item))
 
-        if name_match or desc_match or tag_match:
-            found += 1
-            print(f"  [{item['type']}] {Colors.BOLD}{item['id']}{Colors.NC}")
-            print(f"    {item['description']}")
-            tags = ", ".join(item.get("tags", []))
-            print(f"    Tags: {tags}")
+    results.sort(key=lambda x: -x[0])
 
-            for cli_key in ["claude-code", "codex"]:
-                compat = item.get("compatibility", {}).get(cli_key, {})
-                if compat.get("supported"):
-                    inv = compat.get("invocation", compat.get("path", ""))
-                    print(f"    {cli_key}: {inv}")
-            print()
-
-    if not found:
+    if not results:
         warn(f"No items found matching '{query}'")
+        return
+
+    print(f"  {C.DIM}Found {len(results)} item(s){C.NC}\n")
+    for _, item in results:
+        badge = _cli_badge(item)
+        tags = ", ".join(item.get("tags", []))
+        print(f"  {C.BOLD}[{item['type']}]{C.NC} {item['id']}")
+        print(f"    {item['description']}")
+        print(f"    Tags: {C.DIM}{tags}{C.NC}  CLI: {badge}")
+        if item.get("mcp_required"):
+            print(f"    MCP: {C.MAGENTA}{', '.join(item['mcp_required'])}{C.NC}")
+        print()
 
 
-def list_categories(data: dict):
+def cmd_categories(data: dict):
     header()
-    print(f"{Colors.BOLD}Categories:{Colors.NC}\n")
-    for section, cats in data.get("categories", {}).items():
-        print(f"{Colors.BOLD}{Colors.CYAN}{section.title()}{Colors.NC}")
+    for sect_name, cats in data.get("categories", {}).items():
+        section(sect_name.title())
         for key, val in cats.items():
             icon = val.get("icon", "")
             label = val.get("label", key)
             desc = val.get("description", "")
-            print(f"  {key:<25} {icon} {label}: {desc}")
+            print(f"    {icon} {C.BOLD}{label}{C.NC} ({key})")
+            print(f"      {C.DIM}{desc}{C.NC}")
         print()
+
+
+def cmd_info(data: dict, item_id: str):
+    """Show detailed info about a specific item."""
+    header()
+    item = next((i for i in data["items"] if i["id"] == item_id), None)
+    if not item:
+        err(f"Item not found: {item_id}")
+        return
+
+    display = item.get("displayName", item["name"])
+    print(f"  {C.BOLD}{display}{C.NC}  {C.DIM}({item['id']}){C.NC}")
+    print(f"  Type: {item['type']}")
+    print(f"  Category: {item.get('category', 'N/A')}")
+    print(f"  {item['description']}")
+    print()
+
+    tags = ", ".join(item.get("tags", []))
+    print(f"  Tags: {tags}")
+
+    if item.get("mcp_required"):
+        print(f"  MCP required: {C.MAGENTA}{', '.join(item['mcp_required'])}{C.NC}")
+
+    if item.get("tools"):
+        print(f"  Tools: {', '.join(item['tools'])}")
+
+    print()
+    print(f"  {C.BOLD}Compatibility:{C.NC}")
+    for cli_key, cli_label in [("claude-code", "Claude Code"), ("codex", "Codex CLI")]:
+        compat = item.get("compatibility", {}).get(cli_key, {})
+        if compat.get("supported"):
+            path = compat.get("path", "")
+            inv = compat.get("invocation", "")
+            status = f"{C.GREEN}supported{C.NC}"
+            details = []
+            if inv:
+                details.append(f"invoke: {inv}")
+            if path:
+                details.append(f"path: {path}")
+            detail_str = f" ({', '.join(details)})" if details else ""
+            print(f"    {cli_label}: {status}{detail_str}")
+        else:
+            note = compat.get("note", "")
+            note_str = f" — {note}" if note else ""
+            print(f"    {cli_label}: {C.DIM}not supported{note_str}{C.NC}")
+
+    print()
+    print(f"  {C.BOLD}Install:{C.NC}")
+    print(f"    python3 marketplace/install.py --item {item['id']}")
+    print()
+
+
+def _print_stats(data: dict):
+    stats = data.get("stats", {})
+    print(f"  {C.BOLD}Total: {stats.get('total', '?')} items{C.NC}")
+    print(f"    Claude Code: {C.GREEN}{stats.get('claude_code_supported', '?')}{C.NC} supported")
+    print(f"    Codex CLI:   {C.BLUE}{stats.get('codex_supported', '?')}{C.NC} supported")
+    print()
 
 
 # ── Install ─────────────────────────────────────────────────────────────────
 
-def copy_item(repo_root: Path, src: str, dst: Path, name: str, dry_run: bool) -> bool:
+def _copy_item(repo_root: Path, src: str, dst: Path, name: str, dry_run: bool) -> bool:
     src_path = repo_root / src
 
     if dry_run:
-        info(f"[DRY RUN] Would copy: {src} -> {dst}")
+        dim(f"[DRY RUN] Would install: {name} -> {dst}")
         return True
 
     dst.parent.mkdir(parents=True, exist_ok=True)
@@ -236,28 +372,30 @@ def copy_item(repo_root: Path, src: str, dst: Path, name: str, dry_run: bool) ->
         if dst.exists():
             shutil.rmtree(dst)
         shutil.copytree(src_path, dst)
-        ok(f"Installed {name} -> {dst}")
+        ok(f"{name} -> {dst}")
         return True
     elif src_path.is_file():
         shutil.copy2(src_path, dst)
-        ok(f"Installed {name} -> {dst}")
+        ok(f"{name} -> {dst}")
         return True
     else:
         err(f"Source not found: {src_path}")
         return False
 
 
-def install_item(
+def _install_item(
     data: dict, repo_root: Path, item_id: str,
     target_cli: str, target_dir: Path, dry_run: bool,
-) -> bool:
+) -> Tuple[bool, List[str]]:
+    """Install a single item. Returns (installed, mcp_servers_needed)."""
     item = next((i for i in data["items"] if i["id"] == item_id), None)
     if not item:
         err(f"Item not found: {item_id}")
-        return False
+        return False, []
 
     display = item.get("displayName", item["name"])
     installed = False
+    mcps = item.get("mcp_required", [])
 
     for cli_key, cli_short in [("claude-code", "claude"), ("codex", "codex")]:
         if target_cli not in ("both", cli_short):
@@ -274,144 +412,223 @@ def install_item(
             continue
 
         dst = target_dir / path
-        if copy_item(repo_root, path, dst, f"{display} ({cli_key})", dry_run):
+        if _copy_item(repo_root, path, dst, f"{display} ({cli_key})", dry_run):
             installed = True
 
-    return installed
+    return installed, mcps if installed else []
 
 
-def install_by_type(
+def _install_by_type(
     data: dict, repo_root: Path, item_type: str,
     target_cli: str, target_dir: Path, dry_run: bool,
-):
+) -> Tuple[int, List[str]]:
     items = [i for i in data["items"] if i["type"] == item_type]
     count = 0
+    all_mcps: List[str] = []
     for item in items:
-        if install_item(data, repo_root, item["id"], target_cli, target_dir, dry_run):
+        installed, mcps = _install_item(data, repo_root, item["id"], target_cli, target_dir, dry_run)
+        if installed:
             count += 1
-    info(f"Installed {count} {item_type}(s)")
+            all_mcps.extend(mcps)
+    return count, all_mcps
 
 
-def install_all(
+def _install_by_category(
+    data: dict, repo_root: Path, category: str,
+    target_cli: str, target_dir: Path, dry_run: bool,
+) -> Tuple[int, List[str]]:
+    items = [i for i in data["items"] if i.get("category") == category]
+    if not items:
+        err(f"No items found in category: {category}")
+        return 0, []
+
+    count = 0
+    all_mcps: List[str] = []
+    for item in items:
+        installed, mcps = _install_item(data, repo_root, item["id"], target_cli, target_dir, dry_run)
+        if installed:
+            count += 1
+            all_mcps.extend(mcps)
+    return count, all_mcps
+
+
+def _print_summary(counts: Dict[str, int], mcps: List[str], dry_run: bool):
+    """Print installation summary with MCP server notices."""
+    print()
+    total = sum(counts.values())
+    prefix = "[DRY RUN] Would install" if dry_run else "Installed"
+
+    parts = []
+    for label, n in counts.items():
+        if n > 0:
+            parts.append(f"{n} {label}(s)")
+
+    if parts:
+        ok(f"{prefix} {total} item(s): {', '.join(parts)}")
+    else:
+        warn("Nothing was installed")
+        return
+
+    # MCP server notice
+    unique_mcps = sorted(set(mcps))
+    if unique_mcps:
+        print()
+        print(f"  {C.BOLD}{C.MAGENTA}MCP servers required:{C.NC}")
+        print(f"  {C.DIM}Configure these in your project to use all features:{C.NC}")
+        for mcp in unique_mcps:
+            print(f"    {C.MAGENTA}*{C.NC} {mcp}")
+        print()
+
+
+def cmd_install_all(
     data: dict, repo_root: Path,
     target_cli: str, target_dir: Path, dry_run: bool,
 ):
     header()
-    print(f"Installing all items for: {Colors.BOLD}{target_cli}{Colors.NC}")
-    print(f"Target directory: {Colors.BOLD}{target_dir}{Colors.NC}\n")
-
-    for t in ("agent", "command", "skill"):
-        install_by_type(data, repo_root, t, target_cli, target_dir, dry_run)
-
+    label = target_cli if target_cli != "both" else "Claude Code + Codex CLI"
+    print(f"  Installing all items for {C.BOLD}{label}{C.NC}")
+    print(f"  Target: {C.BOLD}{target_dir}{C.NC}")
     print()
-    ok("Installation complete!")
+
+    all_mcps: List[str] = []
+    counts: Dict[str, int] = {}
+
+    for t, label in [("agent", "agent"), ("command", "command"), ("skill", "skill")]:
+        section(f"{label.title()}s")
+        n, mcps = _install_by_type(data, repo_root, t, target_cli, target_dir, dry_run)
+        counts[label] = n
+        all_mcps.extend(mcps)
+        print()
+
+    _print_summary(counts, all_mcps, dry_run)
 
 
-def install_by_category(
+def cmd_install_type(
+    data: dict, repo_root: Path, item_type: str,
+    target_cli: str, target_dir: Path, dry_run: bool,
+):
+    header()
+    section(f"{item_type.title()}s")
+    n, mcps = _install_by_type(data, repo_root, item_type, target_cli, target_dir, dry_run)
+    _print_summary({item_type: n}, mcps, dry_run)
+
+
+def cmd_install_item(
+    data: dict, repo_root: Path, item_id: str,
+    target_cli: str, target_dir: Path, dry_run: bool,
+):
+    header()
+    installed, mcps = _install_item(data, repo_root, item_id, target_cli, target_dir, dry_run)
+    if installed:
+        _print_summary({"item": 1}, mcps, dry_run)
+
+
+def cmd_install_category(
     data: dict, repo_root: Path, category: str,
     target_cli: str, target_dir: Path, dry_run: bool,
 ):
-    items = [i for i in data["items"] if i.get("category") == category]
-    if not items:
-        err(f"No items found in category: {category}")
-        return
-
     header()
-    print(f"Installing category: {Colors.BOLD}{category}{Colors.NC}\n")
-
-    count = 0
-    for item in items:
-        if install_item(data, repo_root, item["id"], target_cli, target_dir, dry_run):
-            count += 1
-    info(f"Installed {count} item(s) from '{category}'")
+    section(f"Category: {category}")
+    n, mcps = _install_by_category(data, repo_root, category, target_cli, target_dir, dry_run)
+    _print_summary({"item": n}, mcps, dry_run)
 
 
 # ── CLI ─────────────────────────────────────────────────────────────────────
 
 def main():
     parser = argparse.ArgumentParser(
-        prog="marketplace-install",
-        description="AI Agents Marketplace - Install agents, commands, and skills for Claude Code and Codex CLI",
+        prog="install.py",
+        description="AI Agents Marketplace — install agents, commands, and skills for Claude Code and Codex CLI",
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
-Examples:
-  %(prog)s --list                           List all available items
-  %(prog)s --search security                Search for security items
-  %(prog)s --all --target-dir ~/my-project  Install everything
-  %(prog)s --agents --cli claude            Install agents for Claude Code
-  %(prog)s --item agent-bug-detector        Install specific item
-  %(prog)s --category code-review           Install all code review items
-  %(prog)s --all --dry-run                  Preview without installing
+        epilog=f"""
+{C.BOLD}Examples:{C.NC}
+  python3 install.py --list                           Browse all items
+  python3 install.py --search security                Search by keyword
+  python3 install.py --info agent-bug-detector        Show item details
+  python3 install.py --all --target-dir ~/my-project  Install everything
+  python3 install.py --all --cli claude               Install for Claude Code only
+  python3 install.py --agents                         Install all agents
+  python3 install.py --item skill-worktree            Install one item
+  python3 install.py --category code-review           Install a category
+  python3 install.py --all --dry-run                  Preview only
 
-One-liner remote install:
-  python3 <(curl -fsSL https://raw.githubusercontent.com/rouksonix/claude-code-octopus/main/marketplace/install.py) --all --target-dir .
+{C.BOLD}One-liner remote install:{C.NC}
+  {C.DIM}# macOS / Linux{C.NC}
+  python3 <(curl -fsSL https://raw.githubusercontent.com/rouksonix/claude-code-octopus/main/marketplace/install.py) --all
 
-On Windows (PowerShell):
-  irm https://raw.githubusercontent.com/rouksonix/claude-code-octopus/main/marketplace/install.py | python3 - --all --target-dir .
+  {C.DIM}# Windows PowerShell{C.NC}
+  Invoke-WebRequest https://raw.githubusercontent.com/rouksonix/claude-code-octopus/main/marketplace/install.py -OutFile install.py; python install.py --all
+
+{C.BOLD}Item IDs:{C.NC}
+  Pattern: {{type}}-{{name}} — e.g. agent-bug-detector, cmd-pr-review, skill-worktree
+  Use --list to see all IDs.
 """,
     )
 
-    # Actions
+    # Actions (mutually exclusive)
     actions = parser.add_mutually_exclusive_group()
     actions.add_argument("--all", action="store_true", help="Install all items")
     actions.add_argument("--agents", action="store_true", help="Install all agents")
     actions.add_argument("--commands", action="store_true", help="Install all commands")
     actions.add_argument("--skills", action="store_true", help="Install all skills")
-    actions.add_argument("--item", metavar="ID", help="Install specific item by ID")
+    actions.add_argument("--item", metavar="ID", help="Install a specific item by ID")
     actions.add_argument("--category", metavar="CAT", help="Install all items in a category")
-    actions.add_argument("--list", action="store_true", help="List all items")
+    actions.add_argument("--list", action="store_true", help="List all available items")
     actions.add_argument("--list-categories", action="store_true", help="List categories")
-    actions.add_argument("--search", metavar="QUERY", help="Search items")
+    actions.add_argument("--search", metavar="QUERY", help="Search items by keyword")
+    actions.add_argument("--info", metavar="ID", help="Show detailed info about an item")
 
     # Options
     parser.add_argument("--cli", choices=["claude", "codex", "both"], default="both",
-                        help="Target CLI (default: both)")
-    parser.add_argument("--target-dir", default=".", help="Target project directory (default: .)")
-    parser.add_argument("--dry-run", action="store_true", help="Preview without installing")
-    parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
+                        help="Target CLI: claude, codex, or both (default: both)")
+    parser.add_argument("--target-dir", default=".",
+                        help="Target project directory (default: current directory)")
+    parser.add_argument("--dry-run", action="store_true",
+                        help="Preview what would be installed without copying files")
+    parser.add_argument("--version", action="version",
+                        version=f"%(prog)s {__version__}")
 
     args = parser.parse_args()
 
-    # Find marketplace data
-    script_dir = Path(__file__).resolve().parent
-    marketplace_json = find_marketplace_json(script_dir)
-    data = load_marketplace(marketplace_json)
+    # Load marketplace data (always needed)
+    marketplace_path = find_marketplace_json()
+    data = load_marketplace(marketplace_path)
 
-    # Read-only actions
+    # Read-only actions (don't need repo)
     if args.list:
-        list_items(data)
+        cmd_list(data)
         return
     if args.list_categories:
-        list_categories(data)
+        cmd_categories(data)
         return
     if args.search:
-        search_items(data, args.search)
+        cmd_search(data, args.search)
+        return
+    if args.info:
+        cmd_info(data, args.info)
         return
 
-    # Install actions need repo source
-    if not any([args.all, args.agents, args.commands, args.skills, args.item, args.category]):
+    # Install actions (need repo files)
+    needs_install = any([args.all, args.agents, args.commands, args.skills, args.item, args.category])
+    if not needs_install:
         parser.print_help()
         return
 
-    repo_root = find_repo_root(script_dir)
+    repo_root = find_repo_root()
     target_dir = Path(args.target_dir).resolve()
 
     if args.all:
-        install_all(data, repo_root, args.cli, target_dir, args.dry_run)
+        cmd_install_all(data, repo_root, args.cli, target_dir, args.dry_run)
     elif args.agents:
-        header()
-        install_by_type(data, repo_root, "agent", args.cli, target_dir, args.dry_run)
+        cmd_install_type(data, repo_root, "agent", args.cli, target_dir, args.dry_run)
     elif args.commands:
-        header()
-        install_by_type(data, repo_root, "command", args.cli, target_dir, args.dry_run)
+        cmd_install_type(data, repo_root, "command", args.cli, target_dir, args.dry_run)
     elif args.skills:
-        header()
-        install_by_type(data, repo_root, "skill", args.cli, target_dir, args.dry_run)
+        cmd_install_type(data, repo_root, "skill", args.cli, target_dir, args.dry_run)
     elif args.item:
-        header()
-        install_item(data, repo_root, args.item, args.cli, target_dir, args.dry_run)
+        cmd_install_item(data, repo_root, args.item, args.cli, target_dir, args.dry_run)
     elif args.category:
-        install_by_category(data, repo_root, args.category, args.cli, target_dir, args.dry_run)
+        cmd_install_category(data, repo_root, args.category, args.cli, target_dir, args.dry_run)
 
 
 if __name__ == "__main__":

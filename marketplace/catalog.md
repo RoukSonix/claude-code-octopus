@@ -131,39 +131,21 @@ Skills are reusable instruction sets that can run deterministic scripts or provi
 
 ## Installation
 
-### Quick Start
+Single Python installer for all platforms. Requires Python 3.7+, no dependencies.
 
 ```bash
-# Clone the marketplace
-git clone https://github.com/rouksonix/claude-code-octopus.git
-cd claude-code-octopus
+# One-liner (macOS / Linux)
+python3 <(curl -fsSL https://raw.githubusercontent.com/rouksonix/claude-code-octopus/main/marketplace/install.py) --all
 
-# List all available items
-./marketplace/install.sh --list
+# One-liner (Windows PowerShell)
+Invoke-WebRequest https://raw.githubusercontent.com/rouksonix/claude-code-octopus/main/marketplace/install.py -OutFile install.py; python install.py --all
 
-# Install everything for Claude Code
-./marketplace/install.sh --all --cli claude --target-dir ~/my-project
-
-# Install just skills for both CLIs
-./marketplace/install.sh --skills --target-dir ~/my-project
-
-# Install a specific item
-./marketplace/install.sh --item agent-bug-detector --target-dir ~/my-project
-```
-
-### Manual Installation
-
-Copy the files you need directly:
-
-```bash
-# Copy a single agent
-cp .claude/agents/code-review-agents/bug-detector.md ~/my-project/.claude/agents/code-review-agents/
-
-# Copy a skill (entire directory)
-cp -r .claude/skills/worktree/ ~/my-project/.claude/skills/worktree/
-
-# Copy a command
-cp .claude/commands/research/use-context7.md ~/my-project/.claude/commands/research/
+# From cloned repo
+python3 marketplace/install.py --list
+python3 marketplace/install.py --all --cli claude --target-dir ~/my-project
+python3 marketplace/install.py --skills --target-dir ~/my-project
+python3 marketplace/install.py --item agent-bug-detector --target-dir ~/my-project
+python3 marketplace/install.py --info agent-bug-detector
 ```
 
 ---
