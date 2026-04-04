@@ -1,146 +1,269 @@
-# Code Agent Octopus 🐙
+# AI Agents Marketplace
 
-A centralized toolkit for AI coding assistants, providing reusable agents, commands, and workflows that work across multiple CLIs.
+Open marketplace of production-ready **agents**, **commands**, and **skills** for [Claude Code](https://docs.anthropic.com/en/docs/claude-code) and [Codex CLI](https://developers.openai.com/codex/cli).
 
-## Purpose
-- Provide production-ready agents, commands, and MCP-aware workflows for AI coding assistants
-- Support **Claude Code**, **Codex CLI**, **Factory CLI**, and **GitHub Copilot CLI**
-- Ship factory templates (`.factory/`) alongside active configurations so teams can bootstrap new projects quickly
-- Document best practices for managing sub-agents, hooks, and automation around Context7-driven development
+**43 items** | **19 agents** | **20 commands** | **4 skills** | **2 CLIs supported**
 
-## Supported CLIs
+---
 
-| CLI | Configuration | Location |
-|-----|--------------|----------|
-| **Claude Code** | Sub-agents + commands + skills | `.claude/` |
-| **Codex CLI** | AGENTS.md + commands + skills | `.codex/` |
-| **Factory CLI** | AGENTS.md + droids + skills | `.factory/` |
-| **OpenCode CLI** | Agents + commands + skills | `.opencode/` |
-| **Copilot CLI** | AGENTS.md + prompts + skills | `.github/` |
+## What's Inside
 
-## Repository Map
+| Type | Claude Code | Codex CLI | Description |
+|------|:-----------:|:---------:|-------------|
+| **Agents** | 19 | — | Autonomous specialists: planning, code review, security, analysis |
+| **Commands** | 20 | 8 | Guided workflows: JIRA analysis, PR review, testing, research |
+| **Skills** | 4 | 4 | Reusable scripts and AI workflows: worktree, test runner, migration |
+
+## Installation
+
+One installer for all platforms. Requires **Python 3.7+** (pre-installed on macOS and most Linux). No external dependencies.
+
+### One-Liner (macOS / Linux)
+
+```bash
+python3 <(curl -fsSL https://raw.githubusercontent.com/rouksonix/claude-code-octopus/main/marketplace/install.py) --all
+```
+
+### One-Liner (Windows PowerShell)
+
+```powershell
+Invoke-WebRequest https://raw.githubusercontent.com/rouksonix/claude-code-octopus/main/marketplace/install.py -OutFile install.py; python install.py --all
+```
+
+### From Cloned Repo
+
+```bash
+git clone https://github.com/rouksonix/claude-code-octopus.git
+cd claude-code-octopus
+python3 marketplace/install.py --all --target-dir ~/my-project
+```
+
+### Native from Claude Code
+
+```bash
+/marketplace list                         # Browse all items
+/marketplace search security              # Search by keyword
+/marketplace install agent-bug-detector   # Install specific item
+/marketplace install-all                  # Install everything
+```
+
+### Native from Codex CLI
+
+```bash
+/marketplace list
+/marketplace install skill-worktree
+/marketplace install-all
+```
+
+### Installer Options
+
+| Option | Description |
+|--------|-------------|
+| `--list` | Browse all available items |
+| `--search <query>` | Search by name, tag, or description |
+| `--info <id>` | Show detailed info about an item |
+| `--all` | Install everything |
+| `--agents` | Install all agents |
+| `--commands` | Install all commands |
+| `--skills` | Install all skills |
+| `--item <id>` | Install a specific item by ID |
+| `--category <name>` | Install all items in a category |
+| `--cli claude\|codex\|both` | Target CLI (default: both) |
+| `--target-dir <path>` | Target project directory (default: .) |
+| `--dry-run` | Preview without installing |
+
+### Examples
+
+```bash
+# Browse and search
+python3 marketplace/install.py --list
+python3 marketplace/install.py --search security
+python3 marketplace/install.py --info agent-bug-detector
+python3 marketplace/install.py --list-categories
+
+# Install selectively
+python3 marketplace/install.py --agents --cli claude --target-dir ~/my-project
+python3 marketplace/install.py --skills --cli codex
+python3 marketplace/install.py --item skill-worktree
+python3 marketplace/install.py --category code-review
+
+# Preview first
+python3 marketplace/install.py --all --dry-run
+```
+
+## Browse the Catalog
+
+**[Full Catalog](marketplace/catalog.md)** | **[marketplace.json](marketplace.json)**
+
+### Planning & Architecture Agents
+
+Build implementation plans, analyze codebases, design secure architectures.
+
+| Agent | What it does |
+|-------|-------------|
+| **Implementation Planner** | Architecture analysis + detailed implementation roadmaps with Context7 |
+| **Codebase Analyzer** | Deep project structure mapping, dependency analysis, integration points |
+| **Security Architect** | Auth flows, encryption, validation, compliance design |
+| **Performance Architect** | Algorithms, caching strategies, scalability patterns |
+| **Testing Strategist** | Unit, integration, e2e test strategy design |
+| **CI/CD Specialist** | Jenkins, GitHub Actions, GitLab CI pipeline planning |
+| **Quality Advisor** | Architecture patterns and code quality analysis |
+| **Bug Prevention** | Edge case identification before implementation |
+| **Best Practices** | Post-implementation review against current standards |
+| **Documentation Planner** | README, API docs, user guides planning |
+
+### Code Review Agents
+
+Run them individually or orchestrate all 5 in parallel with `/code-review:agentic-code-review`.
+
+| Agent | What it does |
+|-------|-------------|
+| **Bug Detector** | Pattern analysis for bugs, edge cases, and logic errors |
+| **Code Quality** | Best practices, SOLID principles, maintainability |
+| **Performance** | Bottleneck identification and optimization suggestions |
+| **Security** | OWASP vulnerabilities, secure coding practices |
+| **Testing** | Test coverage assessment and improvement suggestions |
+
+### Commands
+
+| Command | Claude Code | Codex | Category |
+|---------|:-----------:|:-----:|----------|
+| Agentic JIRA Analyzer | `/planning:agentic-jira-task-analyze` | — | Planning |
+| JIRA Task Analyzer | `/planning:jira-task-analyze` | `/jira-task-analyze` | Planning |
+| PR Review (Multi-Agent) | `/code-review:pr-review` | — | Review |
+| Agentic Code Review | `/code-review:agentic-code-review` | — | Review |
+| Precommit Review | `/code-review:non-agentic-precommit-review` | `/non-agentic-precommit-review` | Review |
+| Context7 Research | `/research:use-context7` | — | Research |
+| Playwright Testing | `/testing:test-app-playwright` | — | Testing |
+| Create Commit | `/create-commit` | `/create-commit` | DevOps |
+| Python Quality Check | `/quality-check-python` | `/quality-check-python` | DevOps |
+| Frontend Quality Check | `/quality-check-frontend` | `/quality-check-frontend` | DevOps |
+
+[See all 20 commands in the catalog](marketplace/catalog.md#commands-20)
+
+### Skills
+
+| Skill | Type | Both CLIs | Description |
+|-------|------|:---------:|-------------|
+| **Git Worktree** | Script | Yes | Create worktree with gitignored files sync |
+| **JIRA Parallel Planner** | AI | Yes | Analyze dependencies, plan parallel delivery |
+| **Protractor-Playwright** | AI | Yes | Migrate Protractor e2e tests to Playwright |
+| **Test All** | AI | Yes | Discover and run all test suites in monorepo |
+
+## How It Works
+
+### For Claude Code
+
+Agents, commands, and skills are loaded from `.claude/` directory:
 
 ```
-code-agent-octopus/
-├── AGENTS.md                  # Vendor-neutral config (Codex, Factory, Copilot)
-├── CLAUDE.md                  # Claude Code specific guidance
+your-project/
 ├── .claude/
-│   ├── agents/                # Claude Code sub-agents
-│   ├── commands/              # Slash commands (Context7-enabled)
-│   └── skills/                # Skills with shell scripts (automation)
-├── .codex/
-│   ├── commands/              # Codex CLI command mirrors
-│   └── skills/                # Codex CLI skills (worktree, etc.)
-├── .factory/
-│   ├── droids/                # Canonical agent templates (source of truth)
-│   ├── commands/              # Canonical command templates
-│   └── skills/                # Factory CLI skills (worktree, etc.)
-├── .opencode/
-│   ├── agent/                 # OpenCode CLI agents (flat structure)
-│   ├── command/               # OpenCode CLI commands (flat structure)
-│   └── skills/                # OpenCode CLI skills (worktree, etc.)
-├── .github/
-│   ├── prompts/               # GitHub Actions/Copilot prompts
-│   └── skills/                # GitHub Copilot CLI skills (worktree, etc.)
-└── docs/
-    └── claude-code/           # Guides for commands, agents, hooks
+│   ├── agents/                # Sub-agents (auto-discovered)
+│   │   ├── planning-agents/   # Planning specialists
+│   │   └── code-review-agents/# Review specialists
+│   ├── commands/              # Slash commands
+│   │   ├── planning/          # /planning:*
+│   │   ├── code-review/       # /code-review:*
+│   │   ├── research/          # /research:*
+│   │   └── testing/           # /testing:*
+│   └── skills/                # Reusable skills
+│       ├── worktree/
+│       └── test-all/
 ```
 
-## Key Components
-
-- **Planning Agents** (`.factory/droids/planning-agents/*.md`, `.claude/agents/planning-agents/*.md`)  
-  Architecture, testing, deployment, and quality advisors designed to delegate long-form reasoning tasks while staying within Context7 guardrails.
-- **Code Review Agents** (`.factory/droids/code-review-agents/*.md`)  
-  Security, performance, testing, and bug-finding specialists that rely on Context7 lookups for framework-specific guidance.
-- **Research & Memory Commands** (`.factory/commands/research/*.md`, `.factory/commands/context-memory/*.md`)  
-  Provide repeatable flows for consulting Context7, capturing findings, and replaying project memory.
-- **Testing & Tooling Hooks** (`.factory/commands/testing/*.md`, `.claude/commands/testing/*.md`)
-  Automate Playwright, Chrome DevTools MCP, and quality checks across both CLIs.
-- **Skills** (`.claude/skills/`)
-  Shell script-based automation invoked via `/skill-name`. Skills execute scripts directly without model invocation, ideal for deterministic operations like git worktree management.
-
-## Skills vs Commands vs Agents
-
-| Type | Location | Invocation | Model | Use Case |
-|------|----------|------------|-------|----------|
-| **Agents** | `.claude/agents/` | `Task(subagent_type="X")` | Yes | Complex reasoning, analysis |
-| **Commands** | `.claude/commands/` | `/namespace:command` | Yes | Guided workflows |
-| **Skills** | `.claude/skills/` | `/skill-name` | No | Deterministic scripts |
-
-**Key Difference**: Skills use `disable-model-invocation: true` to run scripts directly.
-
-## Working With Templates
-
-`.factory/` contains canonical templates that sync to CLI-specific directories:
-
 ```bash
-# Sync to Claude Code
-cp -r .factory/droids/* .claude/agents/
-cp -r .factory/commands/* .claude/commands/
-
-# Sync to Codex CLI
-cp -r .factory/commands/* .codex/commands/
-```
-
-**Workflow:**
-1. **Edit in Factory** – Make changes to canonical templates in `.factory/`
-2. **Sync to CLIs** – Copy to CLI-specific directories (`.claude/`, `.codex/`, etc.)
-3. **Validate** – Test in your target CLI
-4. **Contribute Back** – Update `.factory/` when changes prove useful
-
-## Quick Start
-
-### Claude Code
-```bash
+# Verify installation
 claude
-/agents                        # List sub-agents
-/planning:agentic-jira-task-analyze PROJ-123
-/worktree                      # Create git worktree with config sync
+/agents      # List installed agents
+/commands    # List available commands
 ```
 
-### Codex CLI
-```bash
-codex
-# AGENTS.md auto-loads project context
-/worktree                      # Create git worktree with config sync
+### For Codex CLI
+
+Commands are loaded from `.codex/prompts/` and skills from `.codex/skills/`:
+
+```
+your-project/
+├── .codex/
+│   ├── prompts/               # Slash commands
+│   └── skills/                # Reusable skills
+│       ├── worktree/
+│       └── test-all/
 ```
 
-### Factory CLI
-```bash
-factory droid code
-# AGENTS.md auto-loads, droids available
-/worktree                      # Create git worktree with config sync
+## MCP Servers
+
+Many items integrate with [MCP servers](https://docs.anthropic.com/en/docs/claude-code/mcp) for enhanced capabilities:
+
+| Server | Items Using | Purpose |
+|--------|:-----------:|---------|
+| **context7** | 20 | Documentation lookup, best practices research |
+| **atlassian** | 7 | JIRA issues, Confluence search |
+| **memory** | 5 | Knowledge persistence across sessions |
+| **filesystem** | 4 | Deep file system analysis |
+| **playwright** | 2 | Browser automation testing |
+| **chrome-devtools** | 2 | Chrome debugging and verification |
+
+## Repository Structure
+
+```
+claude-code-octopus/
+├── marketplace.json           # Machine-readable registry (43 items)
+├── marketplace/
+│   ├── install.py             # Universal installer (macOS/Linux/Windows)
+│   └── catalog.md             # Browsable catalog
+├── .claude/                   # Claude Code items (source)
+│   ├── agents/                # 19 sub-agents
+│   ├── commands/              # 21 slash commands (incl. /marketplace)
+│   └── skills/                # 4 skills
+├── .codex/                    # Codex CLI items
+│   ├── prompts/               # 9 commands (incl. /marketplace)
+│   └── skills/                # 4 skills
+├── .factory/                  # Canonical templates (source of truth)
+│   ├── droids/                # Agent templates
+│   ├── commands/              # Command templates
+│   └── skills/                # Skill templates
+├── CLAUDE.md                  # Claude Code configuration
+├── AGENTS.md                  # Vendor-neutral configuration
+└── docs/                      # Guides and documentation
 ```
 
-### OpenCode CLI
-```bash
-opencode
-@planning-implementation       # Invoke agent with @mention
-/worktree                      # Create git worktree with config sync
-```
+## Contributing
 
-### Copilot CLI
+1. Create your agent/command/skill in the appropriate `.claude/` or `.codex/` directory
+2. Add entry to `marketplace.json` with metadata, tags, and compatibility info
+3. Update the canonical template in `.factory/` if applicable
+4. Test in both Claude Code and Codex CLI
+5. Submit a pull request
+
+See [CLAUDE.md](CLAUDE.md) for detailed architecture and file format specifications.
+
+## Search & Discovery
+
 ```bash
-gh copilot   # Reads AGENTS.md and .github/copilot-instructions.md
-/worktree                      # Create git worktree with config sync
+# Search by keyword
+python3 marketplace/install.py --search security
+
+# Show item details
+python3 marketplace/install.py --info agent-security-reviewer
+
+# List categories
+python3 marketplace/install.py --list-categories
+
+# Browse programmatically
+jq '.items[] | select(.tags | index("testing"))' marketplace.json
 ```
 
 ## Documentation
 
-### Project Docs
-- **[CLAUDE.md](CLAUDE.md)** – Comprehensive guide for Claude Code (architecture, agents, workflows)
-- **[AGENTS.md](AGENTS.md)** – Vendor-neutral config for Codex, Factory, and Copilot CLIs
-- **[Custom Slash Commands](docs/claude-code/custom-slash-commands.md)** – Patterns for reusable workflows
-- **[Sub-Agents Guide](docs/claude-code/sub-agents-guide.md)** – Designing specialized assistants
-- **[Hooks Guide](docs/claude-code/hooks-guide.md)** – Event-driven automation
-- **[Skills (Official Docs)](https://docs.anthropic.com/en/docs/claude-code/skills)** – Shell script automation
+- **[Full Catalog](marketplace/catalog.md)** - Browse all items with descriptions and compatibility
+- **[CLAUDE.md](CLAUDE.md)** - Claude Code architecture, agent/command file formats
+- **[AGENTS.md](AGENTS.md)** - Vendor-neutral conventions for Codex and other CLIs
+- **[Custom Slash Commands](docs/claude-code/custom-slash-commands.md)** - How to create commands
+- **[Sub-Agents Guide](docs/claude-code/sub-agents-guide.md)** - Designing autonomous agents
+- **[Hooks Guide](docs/claude-code/hooks-guide.md)** - Event-driven automation
 
-### Official References
-- [Claude Code](https://docs.anthropic.com/en/docs/claude-code) · [Codex CLI](https://developers.openai.com/codex/cli) · [Factory CLI](https://docs.factory.ai/factory-cli) · [Copilot CLI](https://docs.github.com/en/copilot/concepts/agents/about-copilot-cli)
-- [Model Context Protocol](https://docs.anthropic.com/en/docs/claude-code/mcp) · [Context7](https://context7.com)
+## License
 
-## Security Notes
-
-- Agents and hooks execute with the same permissions as your CLI session; review YAML frontmatter and tool scopes before enabling them.  
-- Keep sensitive credentials out of version control—store them in `.claude/settings.local.json` or environment-specific vaults.  
-- Follow principle of least privilege when enabling MCP servers (Playwright, GitHub, etc.).
+[MIT](LICENSE)
