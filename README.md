@@ -14,31 +14,97 @@ Open marketplace of production-ready **agents**, **commands**, and **skills** fo
 | **Commands** | 20 | 8 | Guided workflows: JIRA analysis, PR review, testing, research |
 | **Skills** | 4 | 4 | Reusable scripts and AI workflows: worktree, test runner, migration |
 
-## Quick Install
+## Installation
+
+### One-Liner Install (macOS / Linux)
 
 ```bash
-# Clone the marketplace
+# Install everything into current project
+curl -fsSL https://raw.githubusercontent.com/rouksonix/claude-code-octopus/main/marketplace/install.sh | bash -s -- --all
+
+# Install only for Claude Code
+curl -fsSL https://raw.githubusercontent.com/rouksonix/claude-code-octopus/main/marketplace/install.sh | bash -s -- --all --cli claude
+
+# Install only skills for Codex
+curl -fsSL https://raw.githubusercontent.com/rouksonix/claude-code-octopus/main/marketplace/install.sh | bash -s -- --skills --cli codex
+```
+
+### One-Liner Install (Windows PowerShell)
+
+```powershell
+# Install everything into current project
+irm https://raw.githubusercontent.com/rouksonix/claude-code-octopus/main/marketplace/install.ps1 -OutFile install.ps1; .\install.ps1 -All
+
+# Install for Claude Code only
+.\install.ps1 -All -Cli claude -TargetDir C:\Projects\my-app
+```
+
+### Cross-Platform (Python 3.7+)
+
+```bash
+# Works on macOS, Linux, and Windows — no external dependencies
+python3 <(curl -fsSL https://raw.githubusercontent.com/rouksonix/claude-code-octopus/main/marketplace/install.py) --all
+
+# Or download first
+curl -fsSL https://raw.githubusercontent.com/rouksonix/claude-code-octopus/main/marketplace/install.py -o install.py
+python3 install.py --all --cli claude --target-dir ~/my-project
+```
+
+### Native from Claude Code
+
+```bash
+# Inside a Claude Code session:
+/marketplace list                    # Browse all items
+/marketplace search security         # Search by keyword
+/marketplace install agent-bug-detector   # Install specific item
+/marketplace install-all             # Install everything
+```
+
+### Native from Codex CLI
+
+```bash
+# Inside a Codex CLI session:
+/marketplace list
+/marketplace search testing
+/marketplace install skill-worktree
+/marketplace install-all
+```
+
+### From Cloned Repo
+
+```bash
 git clone https://github.com/rouksonix/claude-code-octopus.git
 cd claude-code-octopus
 
-# Install everything into your project
+# Bash (macOS/Linux)
 ./marketplace/install.sh --all --target-dir ~/my-project
 
-# Or install selectively
-./marketplace/install.sh --agents --cli claude --target-dir ~/my-project
-./marketplace/install.sh --skills --target-dir ~/my-project
-./marketplace/install.sh --item agent-bug-detector --target-dir ~/my-project
-```
+# Python (any OS)
+python3 marketplace/install.py --all --target-dir ~/my-project
 
-Or copy manually:
+# PowerShell (Windows)
+.\marketplace\install.ps1 -All -TargetDir C:\Projects\my-project
 
-```bash
-# Copy a single agent
+# Or copy manually
 cp .claude/agents/code-review-agents/bug-detector.md ~/my-project/.claude/agents/code-review-agents/
-
-# Copy a skill
 cp -r .claude/skills/worktree/ ~/my-project/.claude/skills/worktree/
 ```
+
+### Installer Options
+
+| Option | Bash | Python | PowerShell | Description |
+|--------|------|--------|------------|-------------|
+| List all | `--list` | `--list` | `-List` | Browse available items |
+| Search | `--search <q>` | `--search <q>` | `-Search <q>` | Search by keyword |
+| Install all | `--all` | `--all` | `-All` | Install everything |
+| Agents only | `--agents` | `--agents` | `-Agents` | Install all agents |
+| Commands only | `--commands` | `--commands` | `-Commands` | Install all commands |
+| Skills only | `--skills` | `--skills` | `-Skills` | Install all skills |
+| Single item | `--item <id>` | `--item <id>` | `-Item <id>` | Install by ID |
+| Category | N/A | `--category <c>` | `-Category <c>` | Install category |
+| Target CLI | `--cli <t>` | `--cli <t>` | `-Cli <t>` | claude/codex/both |
+| Target dir | `--target-dir <d>` | `--target-dir <d>` | `-TargetDir <d>` | Project path |
+| Dry run | `--dry-run` | `--dry-run` | `-DryRun` | Preview only |
 
 ## Browse the Catalog
 
@@ -160,14 +226,16 @@ Many items integrate with [MCP servers](https://docs.anthropic.com/en/docs/claud
 claude-code-octopus/
 ├── marketplace.json           # Machine-readable registry (43 items)
 ├── marketplace/
-│   ├── install.sh             # CLI installer
+│   ├── install.sh             # Bash installer (macOS/Linux)
+│   ├── install.py             # Python installer (cross-platform)
+│   ├── install.ps1            # PowerShell installer (Windows)
 │   └── catalog.md             # Browsable catalog
 ├── .claude/                   # Claude Code items (source)
 │   ├── agents/                # 19 sub-agents
-│   ├── commands/              # 20 slash commands
+│   ├── commands/              # 21 slash commands (incl. /marketplace)
 │   └── skills/                # 4 skills
 ├── .codex/                    # Codex CLI items
-│   ├── prompts/               # 8 commands
+│   ├── prompts/               # 9 commands (incl. /marketplace)
 │   └── skills/                # 4 skills
 ├── .factory/                  # Canonical templates (source of truth)
 │   ├── droids/                # Agent templates

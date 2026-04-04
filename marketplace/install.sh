@@ -20,9 +20,23 @@
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-MARKETPLACE_JSON="$REPO_ROOT/marketplace.json"
+VERSION="1.0.0"
+REPO_URL="https://github.com/rouksonix/claude-code-octopus.git"
+MARKETPLACE_JSON_URL="https://raw.githubusercontent.com/rouksonix/claude-code-octopus/main/marketplace.json"
+
+# Detect if running from local repo or remote (curl pipe)
+if [[ -n "${BASH_SOURCE[0]:-}" ]] && [[ -f "${BASH_SOURCE[0]}" ]]; then
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+    MARKETPLACE_JSON="$REPO_ROOT/marketplace.json"
+    REMOTE_MODE=false
+else
+    # Running via curl pipe or other non-file source
+    SCRIPT_DIR=""
+    REPO_ROOT=""
+    MARKETPLACE_JSON=""
+    REMOTE_MODE=true
+fi
 
 # Colors
 RED='\033[0;31m'
@@ -50,13 +64,47 @@ print_warn()    { echo -e "${YELLOW}[!]${NC} $1"; }
 print_error()   { echo -e "${RED}[ERROR]${NC} $1"; }
 print_info()    { echo -e "${BLUE}[i]${NC} $1"; }
 
+ensure_repo() {
+    # If we already have the repo locally, nothing to do
+    if [[ -n "$REPO_ROOT" ]] && [[ -f "$REPO_ROOT/marketplace.json" ]]; then
+        return
+    fi
+
+    # Need to clone/download
+    print_info "Downloading marketplace repository..."
+
+    local tmp_dir
+    tmp_dir=$(mktemp -d)
+
+    if command -v git &>/dev/null; then
+        git clone --depth=1 "$REPO_URL" "$tmp_dir/claude-code-octopus" 2>/dev/null
+        REPO_ROOT="$tmp_dir/claude-code-octopus"
+    else
+        print_info "git not available, downloading archive..."
+        local archive_url="https://github.com/rouksonix/claude-code-octopus/archive/refs/heads/main.tar.gz"
+        curl -fsSL "$archive_url" | tar xz -C "$tmp_dir"
+        REPO_ROOT="$tmp_dir/$(ls "$tmp_dir" | head -1)"
+    fi
+
+    MARKETPLACE_JSON="$REPO_ROOT/marketplace.json"
+    print_success "Repository downloaded to $REPO_ROOT"
+}
+
+ensure_marketplace_json() {
+    if [[ -n "$MARKETPLACE_JSON" ]] && [[ -f "$MARKETPLACE_JSON" ]]; then
+        return
+    fi
+
+    # For read-only operations (list/search), just download the JSON
+    local tmp_json
+    tmp_json=$(mktemp)
+    curl -fsSL "$MARKETPLACE_JSON_URL" -o "$tmp_json"
+    MARKETPLACE_JSON="$tmp_json"
+}
+
 check_deps() {
     if ! command -v jq &>/dev/null; then
         print_error "jq is required. Install it: brew install jq / apt install jq"
-        exit 1
-    fi
-    if [[ ! -f "$MARKETPLACE_JSON" ]]; then
-        print_error "marketplace.json not found at $MARKETPLACE_JSON"
         exit 1
     fi
 }
@@ -288,12 +336,28 @@ if [[ -z "$ACTION" ]]; then
 fi
 
 case "$ACTION" in
-    list)            list_items ;;
-    list-categories) list_categories ;;
-    search)          search_items "$SEARCH_QUERY" ;;
-    all)             install_all "$TARGET_CLI" "$TARGET_DIR" ;;
-    agents)          print_header; install_by_type "agent" "$TARGET_CLI" "$TARGET_DIR" ;;
-    commands)        print_header; install_by_type "command" "$TARGET_CLI" "$TARGET_DIR" ;;
-    skills)          print_header; install_by_type "skill" "$TARGET_CLI" "$TARGET_DIR" ;;
-    item)            print_header; install_item_by_id "$ITEM_ID" "$TARGET_CLI" "$TARGET_DIR" ;;
+    list)
+        ensure_marketplace_json
+        list_items ;;
+    list-categories)
+        ensure_marketplace_json
+        list_categories ;;
+    search)
+        ensure_marketplace_json
+        search_items "$SEARCH_QUERY" ;;
+    all)
+        ensure_repo
+        install_all "$TARGET_CLI" "$TARGET_DIR" ;;
+    agents)
+        ensure_repo
+        print_header; install_by_type "agent" "$TARGET_CLI" "$TARGET_DIR" ;;
+    commands)
+        ensure_repo
+        print_header; install_by_type "command" "$TARGET_CLI" "$TARGET_DIR" ;;
+    skills)
+        ensure_repo
+        print_header; install_by_type "skill" "$TARGET_CLI" "$TARGET_DIR" ;;
+    item)
+        ensure_repo
+        print_header; install_item_by_id "$ITEM_ID" "$TARGET_CLI" "$TARGET_DIR" ;;
 esac
